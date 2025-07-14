@@ -1,0 +1,25 @@
+spring:
+  cloud:
+    # ==================================================================
+    # Discovery configuration
+    # ==================================================================
+    consul:
+      host: consul
+  # ===================================================================
+  # Datasource configuration
+  # ===================================================================
+  datasource:
+    url: jdbc:postgresql://db-unit:5432/db-unit
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: mysecretpassword
+  # ===================================================================
+  # RabbitMQ configuration
+  # ===================================================================
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+
+file:
+  upload:
+    root: ./Projects/xStay/upload-folder

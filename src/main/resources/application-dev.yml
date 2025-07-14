@@ -1,0 +1,16 @@
+spring:
+  # ===================================================================
+  # Datasource configuration
+  # ===================================================================
+  datasource:
+    url: jdbc:postgresql://localhost:5432/db-guest
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: mysecretpassword
+server:
+  port: 8084
+
+file:
+  upload:
+    root: ${user.home}/Projects/xStay/upload-folder
+    identity-document-image: ${file.upload.root}/guests/:guestId/identity-documents/

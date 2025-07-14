@@ -1,0 +1,75 @@
+spring:
+  profiles:
+    active: @spring.profiles.active@
+  application:
+    name: pricing
+  # ===================================================================
+  # General configuration
+  # ===================================================================
+  devtools:
+    restart:
+      enabled: false
+    livereload:
+      enabled: false
+  # ==================================================================
+  # Jackson configuration
+  # ==================================================================
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+  # ===================================================================
+  # Datasource configuration
+  # ===================================================================
+  datasource:
+    url: jdbc:postgresql://localhost:5432/db-pricing
+    driver-class-name: org.postgresql.Driver
+    username: postgres
+    password: mysecretpassword
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    show-sql: true
+  cloud:
+    # ==================================================================
+    # Discovery configuration
+    # ==================================================================
+    consul:
+      host: localhost
+      port: 8500
+      discovery:
+        instance-id: "${spring.application.name}"
+        prefer-ip-address: true
+        health-check-critical-timeout: "1m"
+        health-check-path: /actuator/health
+        health-check-interval: 10s
+    # ===================================================================
+    # EDA (Event Driven Architecture) configuration
+    # ===================================================================
+#    function:
+#      definition: processMemberChangedInputEvent;
+#    stream:
+#      bindings:
+#        processMemberChangedInputEvent-in-0:
+#          destination: member-changed
+#          group: member-changed-uaa
+#      exchange:
+#        send-email: send-email
+#        email-confirmed: email-confirmed
+# ===================================================================
+# Monitoring & Traceability configuration
+# ===================================================================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
+      probes:
+        enabled: true
+
+
