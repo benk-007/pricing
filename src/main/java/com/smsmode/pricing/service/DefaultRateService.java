@@ -6,7 +6,10 @@ package com.smsmode.pricing.service;
 
 import com.smsmode.pricing.resource.defaultrate.DefaultRateGetResource;
 import com.smsmode.pricing.resource.defaultrate.DefaultRatePostResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
+
 
 /**
  * TODO: add your documentation
@@ -16,6 +19,10 @@ import org.springframework.http.ResponseEntity;
  */
 public interface DefaultRateService {
 
+    ResponseEntity<Page<DefaultRateGetResource>> getByUnitId(String unitId, Pageable pageable);
+
     ResponseEntity<DefaultRateGetResource> create(DefaultRatePostResource defaultRatePostResource);
+
+    ResponseEntity<DefaultRateGetResource> update(String rateId, DefaultRatePostResource defaultRatePostResource);
 
 }

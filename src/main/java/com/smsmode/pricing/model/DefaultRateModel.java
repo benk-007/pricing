@@ -4,11 +4,9 @@
  */
 package com.smsmode.pricing.model;
 
+import com.smsmode.pricing.embeddable.UnitRefEmbeddable;
 import com.smsmode.pricing.model.base.AbstractBaseModel;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Entity;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -30,6 +28,8 @@ public class DefaultRateModel extends AbstractBaseModel {
     private BigDecimal nightly;
     private int minStay = 1;
     private Integer maxStay;
+    @Embedded
+    private UnitRefEmbeddable unit;
     @OneToMany(mappedBy = "rate", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<AdditionalGuestFeeModel> additionalGuestFees = new HashSet<>();
     @OneToMany(mappedBy = "rate", cascade = CascadeType.ALL, orphanRemoval = true)

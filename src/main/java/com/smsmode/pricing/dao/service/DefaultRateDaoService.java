@@ -5,6 +5,9 @@
 package com.smsmode.pricing.dao.service;
 
 import com.smsmode.pricing.model.DefaultRateModel;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 
 /**
  * TODO: add your documentation
@@ -15,4 +18,14 @@ import com.smsmode.pricing.model.DefaultRateModel;
 public interface DefaultRateDaoService {
 
     DefaultRateModel save(DefaultRateModel defaultRateModel);
+
+    /**
+     * Finds all default rates for a specific unit with pagination
+     */
+    Page<DefaultRateModel> findByUnitId(String unitId, Pageable pageable);
+
+    /**
+     * Finds a default rate by its ID
+     */
+    DefaultRateModel findById(String rateId);
 }

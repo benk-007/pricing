@@ -4,9 +4,14 @@
  */
 package com.smsmode.pricing.resource.defaultrate;
 
+import com.smsmode.pricing.embeddable.UnitRefEmbeddable;
+import com.smsmode.pricing.resource.common.dayspecificrate.DaySpecificRateGetResource;
+import com.smsmode.unit.resource.unit.rate.AdditionalGuestFeeGetResource;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * TODO: add your documentation
@@ -16,7 +21,11 @@ import java.math.BigDecimal;
  */
 @Data
 public class DefaultRateGetResource {
+    private String id;
     private BigDecimal nightly;
     private int minStay;
     private Integer maxStay;
+    private UnitRefEmbeddable unit;
+    private Set<AdditionalGuestFeeGetResource> additionalGuestFees = new HashSet<>();
+    private Set<DaySpecificRateGetResource> daySpecificRates = new HashSet<>();
 }

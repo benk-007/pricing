@@ -4,14 +4,19 @@
  */
 package com.smsmode.pricing.resource.defaultrate;
 
+import com.smsmode.pricing.embeddable.UnitRefEmbeddable;
 import com.smsmode.pricing.resource.common.additionalguestfee.AdditionalGuestFeePostResource;
+import com.smsmode.pricing.resource.common.dayspecificrate.DaySpecificRatePostResource;
 import com.smsmode.pricing.validator.ValidGuestFees;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -26,9 +31,18 @@ public class DefaultRatePostResource {
     @NotNull
     private BigDecimal nightly;
     @NotNull
-    @Positive
+    @Min(value = 1, message = "Minimum stay must be at least 1")
     private int minStay = 1;
+    @Min(value = 1, message = "Maximum stay must be at least 1")
     private Integer maxStay;
+
+    @NotNull(message = "Unit information is required")
     @Valid
-    Set<@Valid AdditionalGuestFeePostResource> additionalGuestFees;
+    private UnitRefEmbeddable unit;
+
+    @Valid
+    private Set<@Valid AdditionalGuestFeePostResource> additionalGuestFees = new HashSet<>();
+
+    @Valid
+    private Set<@Valid DaySpecificRatePostResource> daySpecificRates = new HashSet<>();
 }

@@ -9,12 +9,13 @@ import com.smsmode.pricing.resource.defaultrate.DefaultRateGetResource;
 import com.smsmode.pricing.resource.defaultrate.DefaultRatePostResource;
 import com.smsmode.pricing.service.DefaultRateService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * TODO: add your documentation
+ * Implementation of DefaultRateController for managing default rates.
  *
  * @author hamzahabchi (contact: hamza.habchi@messaging-technologies.com)
  * <p>Created 15 Jul 2025</p>
@@ -26,12 +27,17 @@ public class DefaultRateControllerImpl implements DefaultRateController {
     private final DefaultRateService defaultRateService;
 
     @Override
-    public ResponseEntity<DefaultRateGetResource> getAll(Pageable pageable) {
-        return null;
+    public ResponseEntity<Page<DefaultRateGetResource>> getAll(String unitId, Pageable pageable) {
+        return defaultRateService.getByUnitId(unitId, pageable);
     }
 
     @Override
     public ResponseEntity<DefaultRateGetResource> post(DefaultRatePostResource defaultRatePostResource) {
         return defaultRateService.create(defaultRatePostResource);
+    }
+
+    @Override
+    public ResponseEntity<DefaultRateGetResource> patch(String rateId, DefaultRatePostResource defaultRatePatchResource) {
+        return defaultRateService.update(rateId, defaultRatePatchResource);
     }
 }
