@@ -29,6 +29,6 @@ public class DaySpecificRateModel extends AbstractBaseModel {
     @Convert(converter = DayOfWeekSetConverter.class)
     private Set<DayOfWeek> days;
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "DEFAULT_RATE_ID", nullable = false)
+    @JoinColumn(name = "DEFAULT_RATE_ID")
     private DefaultRateModel rate;
 }

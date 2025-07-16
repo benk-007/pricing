@@ -4,11 +4,15 @@
  */
 package com.smsmode.pricing.resource.defaultrate;
 
+import com.smsmode.pricing.resource.common.additionalguestfee.AdditionalGuestFeePostResource;
+import com.smsmode.pricing.validator.ValidGuestFees;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.Set;
 
 /**
  * TODO: add your documentation
@@ -17,6 +21,7 @@ import java.math.BigDecimal;
  * <p>Created 15 Jul 2025</p>
  */
 @Data
+@ValidGuestFees
 public class DefaultRatePostResource {
     @NotNull
     private BigDecimal nightly;
@@ -24,4 +29,6 @@ public class DefaultRatePostResource {
     @Positive
     private int minStay = 1;
     private Integer maxStay;
+    @Valid
+    Set<@Valid AdditionalGuestFeePostResource> additionalGuestFees;
 }

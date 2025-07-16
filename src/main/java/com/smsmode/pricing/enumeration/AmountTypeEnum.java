@@ -10,7 +10,7 @@ package com.smsmode.pricing.enumeration;
  * @author hamzahabchi (contact: hamza.habchi@messaging-technologies.com)
  * <p>Created 15 Jul 2025</p>
  */
-public enum AmountType {
+public enum AmountTypeEnum {
     FLAT,
     PERCENT
 }

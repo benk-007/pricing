@@ -31,7 +31,7 @@ public class DefaultRateModel extends AbstractBaseModel {
     private int minStay = 1;
     private Integer maxStay;
     @OneToMany(mappedBy = "rate", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<AdditionalGuestFeeModel> additionalGuestFee = new HashSet<>();
+    private Set<AdditionalGuestFeeModel> additionalGuestFees = new HashSet<>();
     @OneToMany(mappedBy = "rate", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<DaySpecificRateModel> daySpecificRates = new HashSet<>();
 

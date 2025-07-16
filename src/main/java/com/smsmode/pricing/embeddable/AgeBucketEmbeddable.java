@@ -4,7 +4,11 @@
  */
 package com.smsmode.pricing.embeddable;
 
+import com.smsmode.pricing.validator.ValidAgeRange;
 import jakarta.persistence.Embeddable;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
 
 /**
@@ -15,7 +19,12 @@ import lombok.Data;
  */
 @Data
 @Embeddable
+@ValidAgeRange
 public class AgeBucketEmbeddable {
-    private int fromAge;
-    private int toAge;
+    @PositiveOrZero
+    @NotNull
+    private Integer fromAge;
+    @Positive
+    @NotNull
+    private Integer toAge;
 }
