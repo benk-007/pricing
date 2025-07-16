@@ -17,7 +17,7 @@ public class DaySpecificRatesValidatorImpl implements ConstraintValidator<ValidD
 
     @Override
     public boolean isValid(DefaultRatePostResource resource, ConstraintValidatorContext context) {
-        if (resource == null || resource.getDaySpecificRates() == null) {
+        if (resource == null || resource.getDaySpecificRates() == null || resource.getDaySpecificRates().isEmpty()) {
             return true; // Let other validators handle null cases
         }
 

@@ -48,7 +48,7 @@ public class DefaultRateDaoServiceImpl implements DefaultRateDaoService {
         return defaultRateRepository.findById(rateId).orElseThrow(() -> {
             log.debug("Default rate with ID [{}] not found", rateId);
             return new ResourceNotFoundException(
-                    ResourceNotFoundExceptionTitleEnum.GUEST_NOT_FOUND, // TODO: Add DEFAULT_RATE_NOT_FOUND
+                    ResourceNotFoundExceptionTitleEnum.DEFAULT_RATE_NOT_FOUND,
                     "Default rate with ID [" + rateId + "] not found");
         });
     }

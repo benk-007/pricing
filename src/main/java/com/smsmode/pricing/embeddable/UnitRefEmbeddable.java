@@ -2,7 +2,7 @@ package com.smsmode.pricing.embeddable;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UnitRefEmbeddable {
 
-    @NotNull
+    @NotBlank(message = "Unit UUID is required")
     @Column(name = "UNIT_ID", nullable = false)
     private String uuid;
 }

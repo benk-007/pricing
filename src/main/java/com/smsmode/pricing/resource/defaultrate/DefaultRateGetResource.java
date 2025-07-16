@@ -5,8 +5,8 @@
 package com.smsmode.pricing.resource.defaultrate;
 
 import com.smsmode.pricing.embeddable.UnitRefEmbeddable;
+import com.smsmode.pricing.resource.common.additionalguestfee.AdditionalGuestFeeGetResource;
 import com.smsmode.pricing.resource.common.dayspecificrate.DaySpecificRateGetResource;
-import com.smsmode.unit.resource.unit.rate.AdditionalGuestFeeGetResource;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -14,7 +14,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * TODO: add your documentation
+ * Resource for returning default rate information
  *
  * @author hamzahabchi (contact: hamza.habchi@messaging-technologies.com)
  * <p>Created 15 Jul 2025</p>

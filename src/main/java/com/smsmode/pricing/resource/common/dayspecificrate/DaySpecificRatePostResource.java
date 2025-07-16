@@ -16,6 +16,9 @@ import java.util.Set;
 @Data
 public class DaySpecificRatePostResource {
 
+    // ID is optional: null for CREATE, provided for UPDATE
+    private String id;
+
     @NotNull(message = "Nightly rate is required")
     @Positive(message = "Nightly rate must be positive")
     private BigDecimal nightly;

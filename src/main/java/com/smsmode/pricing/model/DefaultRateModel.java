@@ -15,7 +15,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * TODO: add your documentation
+ * Entity representing a default rate
  *
  * @author hamzahabchi (contact: hamza.habchi@messaging-technologies.com)
  * <p>Created 15 Jul 2025</p>
@@ -25,26 +25,46 @@ import java.util.Set;
 @Entity
 @Table(name = "DEFAULT_RATE")
 public class DefaultRateModel extends AbstractBaseModel {
+
+    @Column(nullable = false)
     private BigDecimal nightly;
-    private int minStay = 1;
+
+    @Column(nullable = false)
+    private int minStay;
+
     private Integer maxStay;
+
     @Embedded
     private UnitRefEmbeddable unit;
-    @OneToMany(mappedBy = "rate", cascade = CascadeType.ALL, orphanRemoval = true)
+
+    @OneToMany(mappedBy = "rate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Set<AdditionalGuestFeeModel> additionalGuestFees = new HashSet<>();
-    @OneToMany(mappedBy = "rate", cascade = CascadeType.ALL, orphanRemoval = true)
+
+    @OneToMany(mappedBy = "rate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private Set<DaySpecificRateModel> daySpecificRates = new HashSet<>();
 
 
-
-/*    public void addAdditionalGuestFee(AdditionalGuestFeeModel fee) {
-        fee.setRate(this); // set the reverse side
-        this.additionalGuestFee.add(fee);
+    public void addAdditionalGuestFee(AdditionalGuestFeeModel fee) {
+        additionalGuestFees.add(fee);
+        fee.setRate(this);
     }
 
+
     public void removeAdditionalGuestFee(AdditionalGuestFeeModel fee) {
-        this.additionalGuestFee.remove(fee);
-        fee.setRate(null); // optional if you want full cleanup
-    }*/
+        additionalGuestFees.remove(fee);
+        fee.setRate(null);
+    }
+
+
+    public void addDaySpecificRate(DaySpecificRateModel dayRate) {
+        daySpecificRates.add(dayRate);
+        dayRate.setRate(this);
+    }
+
+
+    public void removeDaySpecificRate(DaySpecificRateModel dayRate) {
+        daySpecificRates.remove(dayRate);
+        dayRate.setRate(null);
+    }
 
 }
