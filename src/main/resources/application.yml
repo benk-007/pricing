@@ -2,7 +2,7 @@ spring:
   profiles:
     active: @spring.profiles.active@
   application:
-    name: pricing
+    name: rate
   # ===================================================================
   # General configuration
   # ===================================================================
@@ -21,11 +21,6 @@ spring:
   # ===================================================================
   # Datasource configuration
   # ===================================================================
-  datasource:
-    url: jdbc:postgresql://localhost:5432/db-pricing
-    driver-class-name: org.postgresql.Driver
-    username: postgres
-    password: mysecretpassword
   jpa:
     hibernate:
       ddl-auto: create-drop
