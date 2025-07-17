@@ -10,6 +10,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 
+import java.util.List;
+
 
 /**
  * TODO: add your documentation
@@ -19,7 +21,7 @@ import org.springframework.http.ResponseEntity;
  */
 public interface DefaultRateService {
 
-    ResponseEntity<Page<DefaultRateGetResource>> getByUnitId(String unitId, Pageable pageable);
+    ResponseEntity<DefaultRateGetResource> getByUnitId(String unitId);
 
     ResponseEntity<DefaultRateGetResource> create(DefaultRatePostResource defaultRatePostResource);
 

@@ -24,12 +24,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
- * Implementation of DefaultRateService with proper handling of optional collections.
+ * Implementation of DefaultRateService with proper cascade update handling.
+ * Preserves UUIDs of existing entities during updates.
+ *
+ * @author hamzahabchi (contact: hamza.habchi@messaging-technologies.com)
+ * <p>Created 15 Jul 2025</p>
  */
 @Slf4j
 @Service
@@ -102,27 +105,21 @@ public class DefaultRateServiceImpl implements DefaultRateService {
 
     @Override
     @Transactional(readOnly = true)
-    public ResponseEntity<Page<DefaultRateGetResource>> getByUnitId(String unitId, Pageable pageable) {
-        log.debug("Retrieving default rates for unit: {}", unitId);
+    public ResponseEntity<DefaultRateGetResource> getByUnitId(String unitId) {
+        log.debug("Retrieving default rate for unit: {}", unitId);
 
-        Page<DefaultRateModel> defaultRateModelPage = defaultRateDaoService.findByUnitId(unitId, pageable);
+        Page<DefaultRateModel> defaultRateModelPage = defaultRateDaoService.findByUnitId(unitId, Pageable.unpaged());
         log.info("Retrieved {} default rates from database", defaultRateModelPage.getTotalElements());
 
-        Page<DefaultRateGetResource> defaultRateGetResourcePage = defaultRateModelPage.map(model -> {
-            DefaultRateGetResource resource = defaultRateMapper.modelToGetResource(model);
+        // Prendre le premier élément ou retourner 404 si aucun
+        if (defaultRateModelPage.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
 
-            // For GET, we show collections only if they have data
-            if (CollectionUtils.isEmpty(resource.getAdditionalGuestFees())) {
-                resource.setAdditionalGuestFees(null);
-            }
-            if (CollectionUtils.isEmpty(resource.getDaySpecificRates())) {
-                resource.setDaySpecificRates(null);
-            }
+        DefaultRateModel defaultRateModel = defaultRateModelPage.getContent().get(0);
+        DefaultRateGetResource defaultRateGetResource = defaultRateMapper.modelToGetResource(defaultRateModel);
 
-            return resource;
-        });
-
-        return ResponseEntity.ok(defaultRateGetResourcePage);
+        return ResponseEntity.ok(defaultRateGetResource);
     }
 
     @Override
@@ -151,125 +148,161 @@ public class DefaultRateServiceImpl implements DefaultRateService {
         DefaultRateModel updatedDefaultRate = defaultRateDaoService.save(existingDefaultRate);
         log.info("Successfully updated default rate with ID: {}", rateId);
 
-        // Map to response and clean up empty collections
+        // Map to response
         DefaultRateGetResource response = defaultRateMapper.modelToGetResource(updatedDefaultRate);
-
-        if (CollectionUtils.isEmpty(response.getAdditionalGuestFees())) {
-            response.setAdditionalGuestFees(null);
-        }
-        if (CollectionUtils.isEmpty(response.getDaySpecificRates())) {
-            response.setDaySpecificRates(null);
-        }
-
         return ResponseEntity.ok(response);
     }
 
     /**
-     * Updates Additional Guest Fees while preserving existing UUIDs
+     * Updates Additional Guest Fees with 3 scenarios:
+     * 1. No ID in request -> CREATE new entity
+     * 2. ID provided in request -> UPDATE existing entity (preserve UUID)
+     * 3. Existing entity not in request -> DELETE entity
      */
     private void updateAdditionalGuestFees(DefaultRateModel existingRate, Set<AdditionalGuestFeePostResource> newFees) {
         log.debug("Updating additional guest fees");
 
         Set<AdditionalGuestFeeModel> existingFees = existingRate.getAdditionalGuestFees();
 
-        // If newFees is null or empty, clear all existing fees
+        // If newFees is null or empty, remove all existing fees (scenario 3)
         if (CollectionUtils.isEmpty(newFees)) {
-            log.debug("Clearing all additional guest fees");
+            log.debug("No fees in request, removing all existing fees");
+            existingFees.forEach(fee -> fee.setRate(null));
             existingFees.clear();
             return;
         }
 
-        Set<AdditionalGuestFeeModel> updatedFees = new HashSet<>();
+        // Create a map of existing entities by ID for quick lookup
+        Map<String, AdditionalGuestFeeModel> existingById = existingFees.stream()
+                .collect(Collectors.toMap(
+                        AdditionalGuestFeeModel::getId,
+                        fee -> fee
+                ));
 
+        // Set to track which IDs are processed
+        Set<String> processedIds = new HashSet<>();
+
+        // Process each fee in the request
         for (AdditionalGuestFeePostResource feeResource : newFees) {
-            AdditionalGuestFeeModel feeModel = null;
-
-            // Try to find existing fee by ID
             if (StringUtils.hasText(feeResource.getId())) {
-                feeModel = existingFees.stream()
-                        .filter(existing -> feeResource.getId().equals(existing.getId()))
-                        .findFirst()
-                        .orElse(null);
-            }
+                // Scenario 2: ID provided = UPDATE existing entity
+                AdditionalGuestFeeModel existingFee = existingById.get(feeResource.getId());
+                if (existingFee != null) {
+                    log.debug("Updating existing fee with ID: {} - changing guestType from {} to {}",
+                            existingFee.getId(), existingFee.getGuestType(), feeResource.getGuestType());
 
-            if (feeModel != null) {
-                // Update existing entity (preserve UUID)
-                log.debug("Updating existing additional guest fee with ID: {}", feeModel.getId());
-                feeModel.setGuestCount(feeResource.getGuestCount());
-                feeModel.setGuestType(feeResource.getGuestType());
-                feeModel.setAgeBucket(feeResource.getAgeBucket());
-                feeModel.setAmountType(feeResource.getAmountType());
-                feeModel.setValue(feeResource.getValue());
+                    // UPDATE: preserve UUID, modify values
+                    existingFee.setGuestCount(feeResource.getGuestCount());
+                    existingFee.setGuestType(feeResource.getGuestType());
+                    existingFee.setAgeBucket(feeResource.getAgeBucket());
+                    existingFee.setAmountType(feeResource.getAmountType());
+                    existingFee.setValue(feeResource.getValue());
+
+                    processedIds.add(feeResource.getId());
+                } else {
+                    log.warn("Fee with ID {} not found in existing fees, will create new one", feeResource.getId());
+                    // ID provided but entity not found = create new entity
+                    AdditionalGuestFeeModel newFee = defaultRateMapper.additionalGuestFeePostResourceToModel(feeResource);
+                    newFee.setRate(existingRate);
+                    existingFees.add(newFee);
+                }
             } else {
-                // Create new entity
-                log.debug("Creating new additional guest fee");
-                feeModel = defaultRateMapper.additionalGuestFeePostResourceToModel(feeResource);
-                feeModel.setRate(existingRate);
-            }
-
-            updatedFees.add(feeModel);
-        }
-
-        // Add new entities
-        for (AdditionalGuestFeeModel updated : updatedFees) {
-            if (!existingFees.contains(updated)) {
-                existingFees.add(updated);
+                // Scenario 1: No ID = CREATE new entity
+                log.debug("Creating new fee for guestType: {}", feeResource.getGuestType());
+                AdditionalGuestFeeModel newFee = defaultRateMapper.additionalGuestFeePostResourceToModel(feeResource);
+                newFee.setRate(existingRate);
+                existingFees.add(newFee);
+                // Ajouter l'ID de la nouvelle entité aux IDs traités pour éviter la suppression
+                processedIds.add(newFee.getId());
             }
         }
 
-        log.debug("Updated {} additional guest fees", existingFees.size());
+        // Scenario 3: Remove entities that are no longer in the request
+        Iterator<AdditionalGuestFeeModel> iterator = existingFees.iterator();
+        while (iterator.hasNext()) {
+            AdditionalGuestFeeModel existingFee = iterator.next();
+            if (!processedIds.contains(existingFee.getId())) {
+                log.debug("Removing fee with ID: {} (not in request)", existingFee.getId());
+                existingFee.setRate(null);
+                iterator.remove();
+            }
+        }
+
+        log.debug("After update - {} fees remaining", existingFees.size());
     }
 
     /**
-     * Updates Day Specific Rates while preserving existing UUIDs
+     * Updates Day Specific Rates with 3 scenarios:
+     * 1. No ID in request -> CREATE new entity
+     * 2. ID provided in request -> UPDATE existing entity (preserve UUID)
+     * 3. Existing entity not in request -> DELETE entity
      */
     private void updateDaySpecificRates(DefaultRateModel existingRate, Set<DaySpecificRatePostResource> newRates) {
         log.debug("Updating day specific rates");
 
         Set<DaySpecificRateModel> existingRates = existingRate.getDaySpecificRates();
 
-        // If newRates is null or empty, clear all existing rates
+        // If newRates is null or empty, remove all existing rates (scenario 3)
         if (CollectionUtils.isEmpty(newRates)) {
-            log.debug("Clearing all day specific rates");
+            log.debug("No day rates in request, removing all existing rates");
+            existingRates.forEach(rate -> rate.setRate(null));
             existingRates.clear();
             return;
         }
 
-        Set<DaySpecificRateModel> updatedRates = new HashSet<>();
+        // Create a map of existing entities by ID
+        Map<String, DaySpecificRateModel> existingById = existingRates.stream()
+                .collect(Collectors.toMap(
+                        DaySpecificRateModel::getId,
+                        rate -> rate
+                ));
 
+        // Set to track which IDs are processed
+        Set<String> processedIds = new HashSet<>();
+
+        // Process each rate in the request
         for (DaySpecificRatePostResource rateResource : newRates) {
-            DaySpecificRateModel rateModel = null;
-
-            // Try to find existing rate by ID
             if (StringUtils.hasText(rateResource.getId())) {
-                rateModel = existingRates.stream()
-                        .filter(existing -> rateResource.getId().equals(existing.getId()))
-                        .findFirst()
-                        .orElse(null);
-            }
+                // Scenario 2: ID provided = UPDATE existing entity
+                DaySpecificRateModel existingRateModel = existingById.get(rateResource.getId());
+                if (existingRateModel != null) {
+                    log.debug("Updating existing day rate with ID: {} - changing nightly from {} to {}",
+                            existingRateModel.getId(), existingRateModel.getNightly(), rateResource.getNightly());
 
-            if (rateModel != null) {
-                // Update existing entity (preserve UUID)
-                log.debug("Updating existing day specific rate with ID: {}", rateModel.getId());
-                rateModel.setNightly(rateResource.getNightly());
-                rateModel.setDays(rateResource.getDays());
+                    // UPDATE: preserve UUID, modify values
+                    existingRateModel.setNightly(rateResource.getNightly());
+                    existingRateModel.setDays(rateResource.getDays());
+
+                    processedIds.add(rateResource.getId());
+                } else {
+                    log.warn("Day rate with ID {} not found, will create new one", rateResource.getId());
+                    // ID provided but entity not found = create new entity
+                    DaySpecificRateModel newRate = defaultRateMapper.daySpecificRatePostResourceToModel(rateResource);
+                    newRate.setRate(existingRate);
+                    existingRates.add(newRate);
+                }
             } else {
-                // Create new entity
-                log.debug("Creating new day specific rate");
-                rateModel = defaultRateMapper.daySpecificRatePostResourceToModel(rateResource);
-                rateModel.setRate(existingRate);
-            }
-
-            updatedRates.add(rateModel);
-        }
-
-        // Add new entities
-        for (DaySpecificRateModel updated : updatedRates) {
-            if (!existingRates.contains(updated)) {
-                existingRates.add(updated);
+                // Scenario 1: No ID = CREATE new entity
+                log.debug("Creating new day rate for nightly: {}", rateResource.getNightly());
+                DaySpecificRateModel newRate = defaultRateMapper.daySpecificRatePostResourceToModel(rateResource);
+                newRate.setRate(existingRate);
+                existingRates.add(newRate);
+                // Ajouter l'ID de la nouvelle entité aux IDs traités pour éviter la suppression
+                processedIds.add(newRate.getId());
             }
         }
 
-        log.debug("Updated {} day specific rates", existingRates.size());
+        // Scenario 3: Remove entities that are no longer in the request
+        Iterator<DaySpecificRateModel> iterator = existingRates.iterator();
+        while (iterator.hasNext()) {
+            DaySpecificRateModel existingRateModel = iterator.next();
+            if (!processedIds.contains(existingRateModel.getId())) {
+                log.debug("Removing day rate with ID: {} (not in request)", existingRateModel.getId());
+                existingRateModel.setRate(null);
+                iterator.remove();
+            }
+        }
+
+        log.debug("After update - {} day rates remaining", existingRates.size());
     }
 }

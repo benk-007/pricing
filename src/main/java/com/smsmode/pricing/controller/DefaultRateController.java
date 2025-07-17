@@ -8,6 +8,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 
 /**
  * TODO: add your documentation
@@ -19,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public interface DefaultRateController {
 
     @GetMapping
-    ResponseEntity<Page<DefaultRateGetResource>> getAll(@RequestParam String unitId, Pageable pageable);
+    ResponseEntity<DefaultRateGetResource> getAll(@RequestParam String unitId);
 
     @PostMapping
     ResponseEntity<DefaultRateGetResource> post(@Valid @RequestBody DefaultRatePostResource defaultRatePostResource);

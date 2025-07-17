@@ -14,6 +14,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
  * Implementation of DefaultRateController for managing default rates.
  *
@@ -27,8 +29,8 @@ public class DefaultRateControllerImpl implements DefaultRateController {
     private final DefaultRateService defaultRateService;
 
     @Override
-    public ResponseEntity<Page<DefaultRateGetResource>> getAll(String unitId, Pageable pageable) {
-        return defaultRateService.getByUnitId(unitId, pageable);
+    public ResponseEntity<DefaultRateGetResource> getAll(String unitId) {
+        return defaultRateService.getByUnitId(unitId);
     }
 
     @Override
