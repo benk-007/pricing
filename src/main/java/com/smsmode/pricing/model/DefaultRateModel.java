@@ -4,20 +4,20 @@
  */
 package com.smsmode.pricing.model;
 
+import com.smsmode.pricing.embeddable.UnitRefEmbeddable;
 import com.smsmode.pricing.model.base.AbstractBaseModel;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Entity;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
- * TODO: add your documentation
+ * Entity representing a default rate
  *
  * @author hamzahabchi (contact: hamza.habchi@messaging-technologies.com)
  * <p>Created 15 Jul 2025</p>
@@ -27,24 +27,23 @@ import java.util.Set;
 @Entity
 @Table(name = "DEFAULT_RATE")
 public class DefaultRateModel extends AbstractBaseModel {
+
+    @Column(nullable = false)
     private BigDecimal nightly;
-    private int minStay = 1;
+
+    @Column(nullable = false)
+    private int minStay;
+
     private Integer maxStay;
-    @OneToMany(mappedBy = "rate", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<AdditionalGuestFeeModel> additionalGuestFees = new HashSet<>();
-    @OneToMany(mappedBy = "rate", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<DaySpecificRateModel> daySpecificRates = new HashSet<>();
 
+    @Embedded
+    private UnitRefEmbeddable unit;
 
+    @OneToMany(mappedBy = "rate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("createdAt ASC")
+    private List<AdditionalGuestFeeModel> additionalGuestFees = new ArrayList<>();
 
-/*    public void addAdditionalGuestFee(AdditionalGuestFeeModel fee) {
-        fee.setRate(this); // set the reverse side
-        this.additionalGuestFee.add(fee);
-    }
-
-    public void removeAdditionalGuestFee(AdditionalGuestFeeModel fee) {
-        this.additionalGuestFee.remove(fee);
-        fee.setRate(null); // optional if you want full cleanup
-    }*/
-
+    @OneToMany(mappedBy = "rate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("createdAt ASC")
+    private List<DaySpecificRateModel> daySpecificRates = new ArrayList<>();
 }

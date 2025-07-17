@@ -4,7 +4,6 @@
  */
 package com.smsmode.pricing.resource.common.additionalguestfee;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.smsmode.pricing.embeddable.AgeBucketEmbeddable;
 import com.smsmode.pricing.enumeration.AmountTypeEnum;
 import com.smsmode.pricing.enumeration.GuestTypeEnum;
@@ -14,12 +13,11 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Data;
-import org.springframework.validation.annotation.Validated;
 
 import java.math.BigDecimal;
 
 /**
- * TODO: add your documentation
+ * Resource for creating and updating additional guest fees
  *
  * @author hamzahabchi (contact: hamza.habchi@messaging-technologies.com)
  * <p>Created 15 Jul 2025</p>
@@ -27,15 +25,24 @@ import java.math.BigDecimal;
 @Data
 @ValidAgeBucketIfChild
 public class AdditionalGuestFeePostResource {
-    @Min(1)
+
+    // ID is optional: null for CREATE, provided for UPDATE
+    private String id;
+
+    @NotNull(message = "Guest count is required")
+    @Min(value = 1, message = "Guest count must be at least 1")
     private int guestCount;
-    @NotNull
+
+    @NotNull(message = "Guest type is required")
     private GuestTypeEnum guestType;
+
     @Valid
     private AgeBucketEmbeddable ageBucket;
-    @NotNull
+
+    @NotNull(message = "Amount type is required")
     private AmountTypeEnum amountType;
-    @NotNull
-    @PositiveOrZero
+
+    @NotNull(message = "Value is required")
+    @PositiveOrZero(message = "Value must be positive or zero")
     private BigDecimal value;
 }

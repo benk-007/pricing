@@ -8,6 +8,9 @@ import com.smsmode.pricing.resource.defaultrate.DefaultRateGetResource;
 import com.smsmode.pricing.resource.defaultrate.DefaultRatePostResource;
 import org.springframework.http.ResponseEntity;
 
+import java.util.List;
+
+
 /**
  * TODO: add your documentation
  *
@@ -16,6 +19,10 @@ import org.springframework.http.ResponseEntity;
  */
 public interface DefaultRateService {
 
+    ResponseEntity<DefaultRateGetResource> getByUnitId(String unitId);
+
     ResponseEntity<DefaultRateGetResource> create(DefaultRatePostResource defaultRatePostResource);
+
+    ResponseEntity<DefaultRateGetResource> update(String rateId, DefaultRatePostResource defaultRatePostResource);
 
 }
