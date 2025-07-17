@@ -26,7 +26,7 @@ public class AgeRangeValidatorImpl implements ConstraintValidator<ValidAgeRange,
         int from = ageBucket.getFromAge();
         int to = ageBucket.getToAge();
 
-        if (to <= from) {
+        if (to < from) {
             context.disableDefaultConstraintViolation();
             context.buildConstraintViolationWithTemplate("toAge must be greater than fromAge")
                     .addPropertyNode("toAge")

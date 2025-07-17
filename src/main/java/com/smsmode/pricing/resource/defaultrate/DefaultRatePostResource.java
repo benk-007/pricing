@@ -16,6 +16,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -43,8 +44,8 @@ public class DefaultRatePostResource {
     private UnitRefEmbeddable unit;
 
     @Valid
-    private Set<@Valid AdditionalGuestFeePostResource> additionalGuestFees = new HashSet<>();
+    private List<@Valid DaySpecificRatePostResource> daySpecificRates;
 
     @Valid
-    private Set<@Valid DaySpecificRatePostResource> daySpecificRates = new HashSet<>();
+    private List<@Valid AdditionalGuestFeePostResource> additionalGuestFees;
 }

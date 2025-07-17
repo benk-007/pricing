@@ -11,7 +11,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -38,33 +40,10 @@ public class DefaultRateModel extends AbstractBaseModel {
     private UnitRefEmbeddable unit;
 
     @OneToMany(mappedBy = "rate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private Set<AdditionalGuestFeeModel> additionalGuestFees = new HashSet<>();
+    @OrderBy("createdAt ASC")
+    private List<AdditionalGuestFeeModel> additionalGuestFees = new ArrayList<>();
 
     @OneToMany(mappedBy = "rate", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    private Set<DaySpecificRateModel> daySpecificRates = new HashSet<>();
-
-
-    public void addAdditionalGuestFee(AdditionalGuestFeeModel fee) {
-        additionalGuestFees.add(fee);
-        fee.setRate(this);
-    }
-
-
-    public void removeAdditionalGuestFee(AdditionalGuestFeeModel fee) {
-        additionalGuestFees.remove(fee);
-        fee.setRate(null);
-    }
-
-
-    public void addDaySpecificRate(DaySpecificRateModel dayRate) {
-        daySpecificRates.add(dayRate);
-        dayRate.setRate(this);
-    }
-
-
-    public void removeDaySpecificRate(DaySpecificRateModel dayRate) {
-        daySpecificRates.remove(dayRate);
-        dayRate.setRate(null);
-    }
-
+    @OrderBy("createdAt ASC")
+    private List<DaySpecificRateModel> daySpecificRates = new ArrayList<>();
 }

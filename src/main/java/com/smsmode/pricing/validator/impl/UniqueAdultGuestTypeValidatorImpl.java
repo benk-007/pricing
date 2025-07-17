@@ -33,7 +33,7 @@ public class UniqueAdultGuestTypeValidatorImpl implements ConstraintValidator<Va
             return true;
         }
 
-        Set<AdditionalGuestFeePostResource> fees = resource.getAdditionalGuestFees();
+        List<AdditionalGuestFeePostResource> fees = resource.getAdditionalGuestFees();
         boolean isValid = true;
 
         // Check 1: Only one ADULT guest type allowed

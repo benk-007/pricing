@@ -15,7 +15,9 @@ import com.smsmode.pricing.resource.defaultrate.DefaultRateGetResource;
 import com.smsmode.pricing.resource.defaultrate.DefaultRatePostResource;
 import org.mapstruct.*;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -35,9 +37,39 @@ public abstract class DefaultRateMapper {
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "modifiedAt", ignore = true)
     @Mapping(target = "modifiedBy", ignore = true)
-    @Mapping(target = "additionalGuestFees", ignore = true)
-    @Mapping(target = "daySpecificRates", ignore = true)
+    @Mapping(target = "additionalGuestFees", source = "additionalGuestFees", qualifiedByName = "mapAdditionalGuestFees")
+    @Mapping(target = "daySpecificRates", source = "daySpecificRates", qualifiedByName = "mapDaySpecificRates")
     public abstract DefaultRateModel postResourceToModel(DefaultRatePostResource defaultRatePostResource);
+
+    /**
+     * Custom mapping method for additional guest fees collection
+     */
+    @Named("mapAdditionalGuestFees")
+    public List<AdditionalGuestFeeModel> mapAdditionalGuestFees(List<AdditionalGuestFeePostResource> additionalGuestFees) {
+        if (additionalGuestFees == null) {
+            return new ArrayList<>();
+        }
+        List<AdditionalGuestFeeModel> result = new ArrayList<>();
+        for (AdditionalGuestFeePostResource resource : additionalGuestFees) {
+            result.add(additionalGuestFeePostResourceToModel(resource));
+        }
+        return result;
+    }
+
+    /**
+     * Custom mapping method for day specific rates collection
+     */
+    @Named("mapDaySpecificRates")
+    public List<DaySpecificRateModel> mapDaySpecificRates(List<DaySpecificRatePostResource> daySpecificRates) {
+        if (daySpecificRates == null) {
+            return new ArrayList<>();
+        }
+        List<DaySpecificRateModel> result = new ArrayList<>();
+        for (DaySpecificRatePostResource resource : daySpecificRates) {
+            result.add(daySpecificRatePostResourceToModel(resource));
+        }
+        return result;
+    }
 
     /**
      * Maps DefaultRateModel to DefaultRateGetResource including collections
@@ -88,30 +120,24 @@ public abstract class DefaultRateMapper {
     public abstract DaySpecificRateModel daySpecificRatePostResourceToModel(DaySpecificRatePostResource daySpecificRatePostResource);
 
     /**
-     * Custom mapping method for additional guest fees collection
+     * Updates existing AdditionalGuestFeeModel from AdditionalGuestFeePostResource
      */
-    public Set<AdditionalGuestFeeModel> mapAdditionalGuestFees(Set<AdditionalGuestFeePostResource> additionalGuestFees) {
-        if (additionalGuestFees == null) {
-            return new HashSet<>();
-        }
-        Set<AdditionalGuestFeeModel> result = new HashSet<>();
-        for (AdditionalGuestFeePostResource resource : additionalGuestFees) {
-            result.add(additionalGuestFeePostResourceToModel(resource));
-        }
-        return result;
-    }
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "rate", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "modifiedAt", ignore = true)
+    @Mapping(target = "modifiedBy", ignore = true)
+    public abstract void updateAdditionalGuestFeeFromResource(AdditionalGuestFeePostResource source, @MappingTarget AdditionalGuestFeeModel target);
 
     /**
-     * Custom mapping method for day specific rates collection
+     * Updates existing DaySpecificRateModel from DaySpecificRatePostResource
      */
-    public Set<DaySpecificRateModel> mapDaySpecificRates(Set<DaySpecificRatePostResource> daySpecificRates) {
-        if (daySpecificRates == null) {
-            return new HashSet<>();
-        }
-        Set<DaySpecificRateModel> result = new HashSet<>();
-        for (DaySpecificRatePostResource resource : daySpecificRates) {
-            result.add(daySpecificRatePostResourceToModel(resource));
-        }
-        return result;
-    }
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "rate", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "modifiedAt", ignore = true)
+    @Mapping(target = "modifiedBy", ignore = true)
+    public abstract void updateDaySpecificRateFromResource(DaySpecificRatePostResource source, @MappingTarget DaySpecificRateModel target);
 }

@@ -18,12 +18,4 @@ public class DefaultRateSpecification {
                 ObjectUtils.isEmpty(unitId) ? criteriaBuilder.conjunction() :
                         criteriaBuilder.equal(root.get("unit").get("uuid"), unitId);
     }
-
-    /**
-     * Creates a specification to find default rate by ID
-     */
-    public static Specification<DefaultRateModel> withIdEqual(String rateId) {
-        return (root, query, criteriaBuilder) ->
-                criteriaBuilder.equal(root.get(DefaultRateModel_.id), rateId);
-    }
 }
