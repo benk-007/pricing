@@ -39,8 +39,8 @@ public class DefaultRatePostResource {
 
     private Integer maxStay;
 
-    @NotNull(message = "Unit information is required")
     @Valid
+    @NotNull(message = "Unit information is required")
     private UnitRefEmbeddable unit;
 
     @Valid

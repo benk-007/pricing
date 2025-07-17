@@ -24,7 +24,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import java.util.*;
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -45,48 +48,44 @@ public class DefaultRateServiceImpl implements DefaultRateService {
 
     @Override
     public ResponseEntity<DefaultRateGetResource> create(DefaultRatePostResource defaultRatePostResource) {
-        log.debug("Creating default rate for unit: {}", defaultRatePostResource.getUnit().getUuid());
-
+        log.debug("Mapping default rate post resource to model ...");
         DefaultRateModel defaultRateModel = defaultRateMapper.postResourceToModel(defaultRatePostResource);
-
-        if (defaultRateModel.getAdditionalGuestFees() != null) {
+        log.info("Default rate model after mapping is: {}", defaultRateModel);
+        if (!CollectionUtils.isEmpty(defaultRateModel.getAdditionalGuestFees())) {
+            log.debug("Linking additional guest fee models to default rate ...");
             for (AdditionalGuestFeeModel fee : defaultRateModel.getAdditionalGuestFees()) {
                 fee.setRate(defaultRateModel);
             }
         }
-
-        if (defaultRateModel.getDaySpecificRates() != null) {
+        if (!CollectionUtils.isEmpty(defaultRateModel.getDaySpecificRates())) {
+            log.debug("Linking day specific rate models to default rate ...");
             for (DaySpecificRateModel dayRate : defaultRateModel.getDaySpecificRates()) {
                 dayRate.setRate(defaultRateModel);
             }
         }
-
+        log.debug("Saving default rate to database ...");
         defaultRateModel = defaultRateDaoService.save(defaultRateModel);
-        log.info("Successfully created default rate with ID: {}, additionalGuestFees count: {}, daySpecificRates count: {}",
-                defaultRateModel.getId(),
+        log.info("Successfully saved default rate for unit: {}, additionalGuestFees count: {}, daySpecificRates count: {}",
+                defaultRateModel.getUnit().getUuid(),
                 defaultRateModel.getAdditionalGuestFees().size(),
                 defaultRateModel.getDaySpecificRates().size());
-
-        DefaultRateGetResource response = defaultRateMapper.modelToGetResource(defaultRateModel);
-
-        return ResponseEntity.ok(response);
+        log.debug("Mapping default rate model to get resource ...");
+        DefaultRateGetResource defaultRateGetResource = defaultRateMapper.modelToGetResource(defaultRateModel);
+        log.info("Default rate model after mapping is: {}", defaultRateGetResource);
+        return ResponseEntity.created(URI.create("")).body(defaultRateGetResource);
     }
 
     @Override
     @Transactional(readOnly = true)
     public ResponseEntity<DefaultRateGetResource> getByUnitId(String unitId) {
         log.debug("Retrieving default rate for unit: {}", unitId);
-
         Page<DefaultRateModel> defaultRateModelPage = defaultRateDaoService.findByUnitId(unitId, Pageable.unpaged());
         log.info("Retrieved {} default rates from database", defaultRateModelPage.getTotalElements());
-
         if (defaultRateModelPage.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-
-        DefaultRateModel defaultRateModel = defaultRateModelPage.getContent().get(0);
+        DefaultRateModel defaultRateModel = defaultRateModelPage.getContent().getFirst();
         DefaultRateGetResource defaultRateGetResource = defaultRateMapper.modelToGetResource(defaultRateModel);
-
         return ResponseEntity.ok(defaultRateGetResource);
     }
 

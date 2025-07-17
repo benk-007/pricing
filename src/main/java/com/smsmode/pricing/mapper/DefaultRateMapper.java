@@ -14,6 +14,7 @@ import com.smsmode.pricing.resource.common.dayspecificrate.DaySpecificRatePostRe
 import com.smsmode.pricing.resource.defaultrate.DefaultRateGetResource;
 import com.smsmode.pricing.resource.defaultrate.DefaultRatePostResource;
 import org.mapstruct.*;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -32,11 +33,7 @@ public abstract class DefaultRateMapper {
     /**
      * Maps DefaultRatePostResource to DefaultRateModel
      */
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "createdBy", ignore = true)
-    @Mapping(target = "modifiedAt", ignore = true)
-    @Mapping(target = "modifiedBy", ignore = true)
+
     @Mapping(target = "additionalGuestFees", source = "additionalGuestFees", qualifiedByName = "mapAdditionalGuestFees")
     @Mapping(target = "daySpecificRates", source = "daySpecificRates", qualifiedByName = "mapDaySpecificRates")
     public abstract DefaultRateModel postResourceToModel(DefaultRatePostResource defaultRatePostResource);
@@ -46,7 +43,7 @@ public abstract class DefaultRateMapper {
      */
     @Named("mapAdditionalGuestFees")
     public List<AdditionalGuestFeeModel> mapAdditionalGuestFees(List<AdditionalGuestFeePostResource> additionalGuestFees) {
-        if (additionalGuestFees == null) {
+        if (CollectionUtils.isEmpty(additionalGuestFees)) {
             return new ArrayList<>();
         }
         List<AdditionalGuestFeeModel> result = new ArrayList<>();
@@ -61,7 +58,7 @@ public abstract class DefaultRateMapper {
      */
     @Named("mapDaySpecificRates")
     public List<DaySpecificRateModel> mapDaySpecificRates(List<DaySpecificRatePostResource> daySpecificRates) {
-        if (daySpecificRates == null) {
+        if (CollectionUtils.isEmpty(daySpecificRates)) {
             return new ArrayList<>();
         }
         List<DaySpecificRateModel> result = new ArrayList<>();
@@ -80,9 +77,6 @@ public abstract class DefaultRateMapper {
      * Updates existing DefaultRateModel from DefaultRatePostResource
      * Handles cascade updates for collections
      */
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "additionalGuestFees", ignore = true)
     @Mapping(target = "daySpecificRates", ignore = true)
     public abstract void updateModelFromPostResource(DefaultRatePostResource defaultRatePostResource, @MappingTarget DefaultRateModel defaultRateModel);
@@ -95,12 +89,6 @@ public abstract class DefaultRateMapper {
     /**
      * Maps AdditionalGuestFeePostResource to AdditionalGuestFeeModel
      */
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "rate", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "createdBy", ignore = true)
-    @Mapping(target = "modifiedAt", ignore = true)
-    @Mapping(target = "modifiedBy", ignore = true)
     public abstract AdditionalGuestFeeModel additionalGuestFeePostResourceToModel(AdditionalGuestFeePostResource additionalGuestFeePostResource);
 
     /**
@@ -111,12 +99,6 @@ public abstract class DefaultRateMapper {
     /**
      * Maps DaySpecificRatePostResource to DaySpecificRateModel
      */
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "rate", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "createdBy", ignore = true)
-    @Mapping(target = "modifiedAt", ignore = true)
-    @Mapping(target = "modifiedBy", ignore = true)
     public abstract DaySpecificRateModel daySpecificRatePostResourceToModel(DaySpecificRatePostResource daySpecificRatePostResource);
 
     /**
