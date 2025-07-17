@@ -10,9 +10,7 @@ import com.smsmode.pricing.resource.common.dayspecificrate.DaySpecificRateGetRes
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Resource for returning default rate information
