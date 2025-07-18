@@ -3,6 +3,7 @@ package com.smsmode.pricing.mapper;
 import com.smsmode.pricing.model.RatePlanModel;
 import com.smsmode.pricing.resource.common.AuditGetResource;
 import com.smsmode.pricing.resource.rateplan.RatePlanGetResource;
+import com.smsmode.pricing.resource.rateplan.RatePlanPatchResource;
 import com.smsmode.pricing.resource.rateplan.RatePlanPostResource;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -39,5 +40,5 @@ public abstract class RatePlanMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
-    public abstract void updateModelFromPostResource(RatePlanPostResource ratePlanPostResource, @MappingTarget RatePlanModel ratePlanModel);
+    public abstract void updateModelFromPatchResource(RatePlanPatchResource ratePlanPatchResource, @MappingTarget RatePlanModel ratePlanModel);
 }

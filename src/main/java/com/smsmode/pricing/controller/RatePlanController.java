@@ -1,6 +1,7 @@
 package com.smsmode.pricing.controller;
 
 import com.smsmode.pricing.resource.rateplan.RatePlanGetResource;
+import com.smsmode.pricing.resource.rateplan.RatePlanPatchResource;
 import com.smsmode.pricing.resource.rateplan.RatePlanPostResource;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -37,7 +38,7 @@ public interface RatePlanController {
      */
     @PatchMapping("/{ratePlanId}")
     ResponseEntity<RatePlanGetResource> update(@PathVariable String ratePlanId,
-                                               @Valid @RequestBody RatePlanPostResource ratePlanPostResource);
+                                               @Valid @RequestBody RatePlanPatchResource ratePlanPatchResource);
 
     /**
      * Deletes a rate plan by its ID.

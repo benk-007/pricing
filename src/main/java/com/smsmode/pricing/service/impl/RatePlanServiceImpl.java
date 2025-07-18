@@ -4,6 +4,7 @@ import com.smsmode.pricing.dao.service.RatePlanDaoService;
 import com.smsmode.pricing.mapper.RatePlanMapper;
 import com.smsmode.pricing.model.RatePlanModel;
 import com.smsmode.pricing.resource.rateplan.RatePlanGetResource;
+import com.smsmode.pricing.resource.rateplan.RatePlanPatchResource;
 import com.smsmode.pricing.resource.rateplan.RatePlanPostResource;
 import com.smsmode.pricing.service.RatePlanService;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
+import java.util.List;
 
 /**
  * Implementation of RatePlanService for managing rate plan business operations.
@@ -34,6 +36,11 @@ public class RatePlanServiceImpl implements RatePlanService {
 
         // Transform POST resource to model
         RatePlanModel ratePlanModel = ratePlanMapper.postResourceToModel(ratePlanPostResource);
+
+        // If new rate plan is enabled, disable competitors
+        if (Boolean.TRUE.equals(ratePlanModel.getEnabled())) {
+            disableCompetitors(ratePlanModel);
+        }
 
         // Save to database
         ratePlanModel = ratePlanDaoService.save(ratePlanModel);
@@ -75,7 +82,7 @@ public class RatePlanServiceImpl implements RatePlanService {
     }
 
     @Override
-    public ResponseEntity<RatePlanGetResource> update(String ratePlanId, RatePlanPostResource ratePlanPostResource) {
+    public ResponseEntity<RatePlanGetResource> update(String ratePlanId, RatePlanPatchResource ratePlanPatchResource) {
         log.debug("Updating rate plan with ID: {}", ratePlanId);
 
         // Find existing rate plan
@@ -83,7 +90,12 @@ public class RatePlanServiceImpl implements RatePlanService {
         log.debug("Found existing rate plan: {}", existingRatePlan.getId());
 
         // Update model with new data
-        ratePlanMapper.updateModelFromPostResource(ratePlanPostResource, existingRatePlan);
+        ratePlanMapper.updateModelFromPatchResource(ratePlanPatchResource, existingRatePlan);
+
+        // If updated rate plan is enabled, disable competitors
+        if (Boolean.TRUE.equals(existingRatePlan.getEnabled())) {
+            disableCompetitors(existingRatePlan);
+        }
 
         // Save updated model
         RatePlanModel updatedRatePlan = ratePlanDaoService.save(existingRatePlan);
@@ -93,6 +105,30 @@ public class RatePlanServiceImpl implements RatePlanService {
         RatePlanGetResource response = ratePlanMapper.modelToGetResource(updatedRatePlan);
 
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Disables competitor rate plans with same combination.
+     */
+    private void disableCompetitors(RatePlanModel ratePlanModel) {
+        log.debug("Disabling competitors for rate plan: {}", ratePlanModel.getName());
+
+        // Extract combination values
+        String segmentUuid = ratePlanModel.getSegment() != null ? ratePlanModel.getSegment().getUuid() : null;
+        String subSegmentUuid = ratePlanModel.getSubSegment() != null ? ratePlanModel.getSubSegment().getUuid() : null;
+
+        // Find competitors with same combination
+        List<RatePlanModel> competitors = ratePlanDaoService.findEnabledRatePlansWithSameCombination(segmentUuid, subSegmentUuid);
+
+        // Remove current rate plan from competitors (for UPDATE case)
+        competitors.removeIf(competitor -> competitor.getId().equals(ratePlanModel.getId()));
+
+        if (!competitors.isEmpty()) {
+            log.info("Found {} competitors to disable", competitors.size());
+            ratePlanDaoService.disableRatePlans(competitors);
+        } else {
+            log.debug("No competitors found");
+        }
     }
 
     @Override

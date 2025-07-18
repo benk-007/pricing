@@ -14,17 +14,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Entity
-@Table(name = "RATE_PLAN",
-        uniqueConstraints = {
-                // Ensures each rate plan has a unique name globally
-                @UniqueConstraint(name = "UK_RATE_PLAN_NAME", columnNames = {"NAME"}),
-                // Note: This constraint alone cannot handle our business rules because:
-                // - Multiple NULL values are allowed for SEGMENT_UUID (which we want for the first rate plan)
-                // - Cannot prevent: segment="S1", subSegment=null + segment="S1", subSegment=null ( NULL != NULL)
-                // Business logic validation will be handled by custom validators
-                @UniqueConstraint(name = "UK_RATE_PLAN_SEGMENT_SUBSEGMENT",
-                        columnNames = {"SEGMENT_UUID", "SUBSEGMENT_UUID"})
-        })
+@Table(name = "RATE_PLAN")
 public class RatePlanModel extends AbstractBaseModel {
 
     @Column(name = "NAME", nullable = false)

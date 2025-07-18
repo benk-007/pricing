@@ -1,6 +1,7 @@
 package com.smsmode.pricing.service;
 
 import com.smsmode.pricing.resource.rateplan.RatePlanGetResource;
+import com.smsmode.pricing.resource.rateplan.RatePlanPatchResource;
 import com.smsmode.pricing.resource.rateplan.RatePlanPostResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -29,7 +30,7 @@ public interface RatePlanService {
     /**
      * Updates an existing rate plan.
      */
-    ResponseEntity<RatePlanGetResource> update(String ratePlanId, RatePlanPostResource ratePlanPostResource);
+    ResponseEntity<RatePlanGetResource> update(String ratePlanId, RatePlanPatchResource ratePlanPatchResource);
 
     /**
      * Deletes a rate plan by its ID.

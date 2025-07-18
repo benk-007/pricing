@@ -2,6 +2,7 @@ package com.smsmode.pricing.controller.impl;
 
 import com.smsmode.pricing.controller.RatePlanController;
 import com.smsmode.pricing.resource.rateplan.RatePlanGetResource;
+import com.smsmode.pricing.resource.rateplan.RatePlanPatchResource;
 import com.smsmode.pricing.resource.rateplan.RatePlanPostResource;
 import com.smsmode.pricing.service.RatePlanService;
 import lombok.RequiredArgsConstructor;
@@ -40,9 +41,9 @@ public class RatePlanControllerImpl implements RatePlanController {
     }
 
     @Override
-    public ResponseEntity<RatePlanGetResource> update(String ratePlanId, RatePlanPostResource ratePlanPostResource) {
+    public ResponseEntity<RatePlanGetResource> update(String ratePlanId, RatePlanPatchResource ratePlanPatchResource) {
         log.debug("PATCH /rate-plans/{} - Updating rate plan", ratePlanId);
-        return ratePlanService.update(ratePlanId, ratePlanPostResource);
+        return ratePlanService.update(ratePlanId, ratePlanPatchResource);
     }
 
     @Override
