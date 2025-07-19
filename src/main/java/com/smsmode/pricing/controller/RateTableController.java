@@ -25,9 +25,7 @@ public interface RateTableController {
      * Retrieves rate tables with filters and pagination.
      */
     @GetMapping
-    ResponseEntity<Page<RateTableGetResource>> getAll(@RequestParam String ratePlanUuid,
-                                                      @RequestParam(required = false) String search,
-                                                      Pageable pageable);
+    ResponseEntity<Page<RateTableGetResource>> getAll(@RequestParam String ratePlanUuid, @RequestParam(required = false) String search, Pageable pageable);
 
     /**
      * Retrieves a rate table by its ID.
@@ -39,8 +37,7 @@ public interface RateTableController {
      * Updates an existing rate table.
      */
     @PatchMapping("/{rateTableId}")
-    ResponseEntity<RateTableGetResource> update(@PathVariable String rateTableId,
-                                                @Valid @RequestBody RateTablePatchResource rateTablePatchResource);
+    ResponseEntity<RateTableGetResource> update(@PathVariable String rateTableId, @Valid @RequestBody RateTablePatchResource rateTablePatchResource);
 
     /**
      * Deletes a rate table by its ID.

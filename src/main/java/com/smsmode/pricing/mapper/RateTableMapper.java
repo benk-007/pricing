@@ -135,4 +135,11 @@ public abstract class RateTableMapper {
      * Maps DaySpecificRatePostResource to RateTableDaySpecificRateModel.
      */
     public abstract RateTableDaySpecificRateModel daySpecificRatePostResourceToModel(DaySpecificRatePostResource daySpecificRatePostResource);
+
+    public abstract void updateAdditionalGuestFeeFromResource(AdditionalGuestFeePostResource source,
+                                                              @MappingTarget RateTableAdditionalGuestFeeModel target);
+
+    public abstract void updateDaySpecificRateFromResource(DaySpecificRatePostResource source,
+                                                           @MappingTarget RateTableDaySpecificRateModel target);
+
 }

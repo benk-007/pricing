@@ -4,6 +4,9 @@ import com.smsmode.pricing.embeddable.RatePlanRefEmbeddable;
 import com.smsmode.pricing.enumeration.RateTableTypeEnum;
 import com.smsmode.pricing.resource.common.additionalguestfee.AdditionalGuestFeePostResource;
 import com.smsmode.pricing.resource.common.dayspecificrate.DaySpecificRatePostResource;
+import com.smsmode.pricing.validator.ValidDaySpecificRates;
+import com.smsmode.pricing.validator.ValidGuestFees;
+import jakarta.validation.Valid;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -30,6 +33,9 @@ public class RateTablePatchResource {
     private Integer maxOccupancy;
 
     private RatePlanRefEmbeddable ratePlan;
-    private List<DaySpecificRatePostResource> daySpecificRates;
-    private List<AdditionalGuestFeePostResource> additionalGuestFees;
+    @Valid
+    private List<@Valid DaySpecificRatePostResource> daySpecificRates;
+
+    @Valid
+    private List<@Valid AdditionalGuestFeePostResource> additionalGuestFees;
 }
