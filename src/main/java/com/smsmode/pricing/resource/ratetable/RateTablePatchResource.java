@@ -3,7 +3,6 @@ package com.smsmode.pricing.resource.ratetable;
 import com.smsmode.pricing.embeddable.RatePlanRefEmbeddable;
 import com.smsmode.pricing.enumeration.RateTableTypeEnum;
 import com.smsmode.pricing.resource.common.BaseRateResource;
-import com.smsmode.pricing.validator.ValidRateTableDates;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -12,7 +11,6 @@ import java.time.LocalDate;
 
 @Data
 @EqualsAndHashCode(callSuper = true)
-@ValidRateTableDates
 public class RateTablePatchResource extends BaseRateResource {
     // Everything is optional (no @NotNull, @NotBlank)
     private String name;
