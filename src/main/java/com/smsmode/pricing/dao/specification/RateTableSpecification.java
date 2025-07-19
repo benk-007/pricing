@@ -18,7 +18,7 @@ public class RateTableSpecification {
     public static Specification<RateTableModel> withRatePlanUuid(String ratePlanUuid) {
         return (root, query, criteriaBuilder) ->
                 ObjectUtils.isEmpty(ratePlanUuid) ? criteriaBuilder.conjunction() :
-                        criteriaBuilder.equal(root.get("ratePlan").get("uuid"), ratePlanUuid);
+                        criteriaBuilder.equal(root.get("ratePlan").get("id"), ratePlanUuid);
     }
 
     /**
@@ -53,7 +53,7 @@ public class RateTableSpecification {
             }
 
             // Same rate plan and same type
-            var ratePlanCondition = criteriaBuilder.equal(root.get("ratePlan").get("uuid"), ratePlanUuid);
+            var ratePlanCondition = criteriaBuilder.equal(root.get("ratePlan").get("id"), ratePlanUuid);
             var typeCondition = criteriaBuilder.equal(root.get("type"), type);
 
             // Overlapping logic: NOT (endDate < other.startDate OR startDate > other.endDate)

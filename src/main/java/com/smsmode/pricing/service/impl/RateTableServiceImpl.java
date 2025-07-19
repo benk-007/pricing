@@ -43,10 +43,12 @@ public class RateTableServiceImpl implements RateTableService {
         // Transform POST resource to model
         RateTableModel rateTableModel = rateTableMapper.postResourceToModel(rateTablePostResource);
 
-        // Load existing RatePlan from database and set the reference
-        String ratePlanUuid = rateTablePostResource.getRatePlan().getUuid();
-        RatePlanModel ratePlan = ratePlanDaoService.findById(ratePlanUuid);
-        rateTableModel.setRatePlan(ratePlan); // ← AJOUTER
+        if (rateTablePostResource.getRatePlan() != null) {
+            String ratePlanUuid = rateTablePostResource.getRatePlan().getUuid();
+            RatePlanModel ratePlan = rateTableMapper.resolveRatePlan(ratePlanUuid);
+            rateTableModel.setRatePlan(ratePlan);
+        }
+
 
         // Validate overlapping dates before saving
         validateOverlapping(rateTableModel, null);
@@ -107,7 +109,7 @@ public class RateTableServiceImpl implements RateTableService {
         // Dans update(), après le mapping PATCH, ajouter :
         if (rateTablePatchResource.getRatePlan() != null) {
             String ratePlanUuid = rateTablePatchResource.getRatePlan().getUuid();
-            RatePlanModel ratePlan = ratePlanDaoService.findById(ratePlanUuid);
+            RatePlanModel ratePlan = rateTableMapper.resolveRatePlan(ratePlanUuid);
             existingRateTable.setRatePlan(ratePlan);
         }
 
