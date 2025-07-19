@@ -5,10 +5,7 @@ import com.smsmode.pricing.dao.service.RateTableDaoService;
 import com.smsmode.pricing.exception.ConflictException;
 import com.smsmode.pricing.exception.enumeration.ConflictExceptionTitleEnum;
 import com.smsmode.pricing.mapper.RateTableMapper;
-import com.smsmode.pricing.model.RatePlanModel;
-import com.smsmode.pricing.model.RateTableAdditionalGuestFeeModel;
-import com.smsmode.pricing.model.RateTableDaySpecificRateModel;
-import com.smsmode.pricing.model.RateTableModel;
+import com.smsmode.pricing.model.*;
 import com.smsmode.pricing.resource.common.additionalguestfee.AdditionalGuestFeePostResource;
 import com.smsmode.pricing.resource.common.dayspecificrate.DaySpecificRatePostResource;
 import com.smsmode.pricing.resource.ratetable.RateTableGetResource;
@@ -56,12 +53,10 @@ public class RateTableServiceImpl implements RateTableService {
             rateTableModel.setRatePlan(ratePlan);
         }
 
+        handleCollections(rateTableModel, rateTablePostResource);
 
         // Validate overlapping dates before saving
         validateOverlapping(rateTableModel, null);
-
-        // Set bidirectional relationships for collections
-        setBidirectionalRelationships(rateTableModel);
 
         // Save to database
         rateTableModel = rateTableDaoService.save(rateTableModel);
@@ -113,21 +108,10 @@ public class RateTableServiceImpl implements RateTableService {
         // Update model with new data
         rateTableMapper.updateModelFromPatchResource(rateTablePatchResource, existingRateTable);
 
-        // Dans update(), après le mapping PATCH, ajouter :
-        if (rateTablePatchResource.getRatePlan() != null) {
-            String ratePlanUuid = rateTablePatchResource.getRatePlan().getUuid();
-            RatePlanModel ratePlan = rateTableMapper.resolveRatePlan(ratePlanUuid);
-            existingRateTable.setRatePlan(ratePlan);
-        }
-
-        updateAdditionalGuestFees(existingRateTable, rateTablePatchResource.getAdditionalGuestFees());
-        updateDaySpecificRates(existingRateTable, rateTablePatchResource.getDaySpecificRates());
+        updateCollections(existingRateTable, rateTablePatchResource);
 
         // Validate overlapping dates (excluding current rate table)
         validateOverlapping(existingRateTable, rateTableId);
-
-        // Update bidirectional relationships for collections
-        setBidirectionalRelationships(existingRateTable);
 
         // Save updated model
         RateTableModel updatedRateTable = rateTableDaoService.save(existingRateTable);
@@ -169,33 +153,52 @@ public class RateTableServiceImpl implements RateTableService {
         );
 
         if (hasOverlap) {
-            log.debug("Overlapping dates detected for rate table type: {} in rate plan: {}",
-                    rateTableModel.getType(), ratePlanUuid);
+            String errorMessage = String.format(
+                    "Rate table dates [%s - %s] overlap with existing rate table of type '%s'. " +
+                            "Please choose different dates or modify the existing rate table.",
+                    rateTableModel.getStartDate(),
+                    rateTableModel.getEndDate(),
+                    rateTableModel.getType()
+            );
+
+            log.warn("Overlapping dates detected for rate table '{}': type={}, dates=[{} - {}]",
+                    rateTableModel.getName(),
+                    rateTableModel.getType(),
+                    rateTableModel.getStartDate(),
+                    rateTableModel.getEndDate());
+
             throw new ConflictException(
                     ConflictExceptionTitleEnum.OVERLAPPING_RATE_TABLE_DATES,
-                    "Rate table dates overlap with existing rate table of same type"
+                    errorMessage
             );
         }
 
-        log.debug("No overlapping dates found");
+        log.debug("No overlapping dates found for rate table: {}", rateTableModel.getName());
     }
 
-    /**
-     * Sets bidirectional relationships for collections.
-     */
-    private void setBidirectionalRelationships(RateTableModel rateTableModel) {
-        if (rateTableModel.getAdditionalGuestFees() != null) {
-            for (RateTableAdditionalGuestFeeModel fee : rateTableModel.getAdditionalGuestFees()) {
-                fee.setRateTable(rateTableModel);
+    private void handleCollections(RateTableModel model, RateTablePostResource resource) {
+        if (resource.getAdditionalGuestFees() != null) {
+            for (AdditionalGuestFeePostResource feeResource : resource.getAdditionalGuestFees()) {
+                AdditionalGuestFeeModel fee = rateTableMapper.additionalGuestFeePostResourceToModel(feeResource);
+                fee.setRateTable(model);
+                model.getAdditionalGuestFees().add(fee);
             }
         }
 
-        if (rateTableModel.getDaySpecificRates() != null) {
-            for (RateTableDaySpecificRateModel dayRate : rateTableModel.getDaySpecificRates()) {
-                dayRate.setRateTable(rateTableModel);
+        if (resource.getDaySpecificRates() != null) {
+            for (DaySpecificRatePostResource rateResource : resource.getDaySpecificRates()) {
+                DaySpecificRateModel rate = rateTableMapper.daySpecificRatePostResourceToModel(rateResource);
+                rate.setRateTable(model);
+                model.getDaySpecificRates().add(rate);
             }
         }
     }
+
+    private void updateCollections(RateTableModel existingModel, RateTablePatchResource resource) {
+        updateAdditionalGuestFees(existingModel, resource.getAdditionalGuestFees());
+        updateDaySpecificRates(existingModel, resource.getDaySpecificRates());
+    }
+
 
 
     /**
@@ -208,7 +211,7 @@ public class RateTableServiceImpl implements RateTableService {
                                            List<AdditionalGuestFeePostResource> newFees) {
         log.debug("Updating additional guest fees for rate table");
 
-        List<RateTableAdditionalGuestFeeModel> existingFees = existingRateTable.getAdditionalGuestFees();
+        List<AdditionalGuestFeeModel> existingFees = existingRateTable.getAdditionalGuestFees();
 
         // Si newFees est null, ne rien faire (PATCH partiel)
         if (newFees == null) {
@@ -224,35 +227,35 @@ public class RateTableServiceImpl implements RateTableService {
         }
 
         // Créer une map des entités existantes par ID pour lookup rapide
-        Map<String, RateTableAdditionalGuestFeeModel> existingById = existingFees.stream()
+        Map<String, AdditionalGuestFeeModel> existingById = existingFees.stream()
                 .filter(fee -> fee.getId() != null)
                 .collect(Collectors.toMap(
-                        RateTableAdditionalGuestFeeModel::getId,
+                        AdditionalGuestFeeModel::getId,
                         fee -> fee
                 ));
 
         // Créer une nouvelle collection pour les fees mises à jour
-        List<RateTableAdditionalGuestFeeModel> updatedFees = new ArrayList<>();
+        List<AdditionalGuestFeeModel> updatedFees = new ArrayList<>();
 
         // Traiter chaque fee dans la requête
         for (AdditionalGuestFeePostResource feeResource : newFees) {
             if (StringUtils.hasText(feeResource.getId())) {
                 // Scénario 2: ID fourni = UPDATE entité existante
-                RateTableAdditionalGuestFeeModel existingFee = existingById.get(feeResource.getId());
+                AdditionalGuestFeeModel existingFee = existingById.get(feeResource.getId());
                 if (existingFee != null) {
                     log.debug("Updating existing fee with ID: {}", existingFee.getId());
                     rateTableMapper.updateAdditionalGuestFeeFromResource(feeResource, existingFee);
                     updatedFees.add(existingFee);
                 } else {
                     log.warn("Fee with ID {} not found, creating new one", feeResource.getId());
-                    RateTableAdditionalGuestFeeModel newFee = rateTableMapper.additionalGuestFeePostResourceToModel(feeResource);
+                    AdditionalGuestFeeModel newFee = rateTableMapper.additionalGuestFeePostResourceToModel(feeResource);
                     newFee.setRateTable(existingRateTable);
                     updatedFees.add(newFee);
                 }
             } else {
                 // Scénario 1: Pas d'ID = CREATE nouvelle entité
                 log.debug("Creating new fee for guestType: {}", feeResource.getGuestType());
-                RateTableAdditionalGuestFeeModel newFee = rateTableMapper.additionalGuestFeePostResourceToModel(feeResource);
+                AdditionalGuestFeeModel newFee = rateTableMapper.additionalGuestFeePostResourceToModel(feeResource);
                 newFee.setRateTable(existingRateTable);
                 updatedFees.add(newFee);
             }
@@ -275,7 +278,7 @@ public class RateTableServiceImpl implements RateTableService {
                                         List<DaySpecificRatePostResource> newRates) {
         log.debug("Updating day specific rates for rate table");
 
-        List<RateTableDaySpecificRateModel> existingRates = existingRateTable.getDaySpecificRates();
+        List<DaySpecificRateModel> existingRates = existingRateTable.getDaySpecificRates();
 
         // Si newRates est null, ne rien faire (PATCH partiel)
         if (newRates == null) {
@@ -290,31 +293,31 @@ public class RateTableServiceImpl implements RateTableService {
             return;
         }
 
-        Map<String, RateTableDaySpecificRateModel> existingById = existingRates.stream()
+        Map<String, DaySpecificRateModel> existingById = existingRates.stream()
                 .filter(rate -> rate.getId() != null)
                 .collect(Collectors.toMap(
-                        RateTableDaySpecificRateModel::getId,
+                        DaySpecificRateModel::getId,
                         rate -> rate
                 ));
 
-        List<RateTableDaySpecificRateModel> updatedRates = new ArrayList<>();
+        List<DaySpecificRateModel> updatedRates = new ArrayList<>();
 
         for (DaySpecificRatePostResource rateResource : newRates) {
             if (StringUtils.hasText(rateResource.getId())) {
-                RateTableDaySpecificRateModel existingRateModel = existingById.get(rateResource.getId());
+                DaySpecificRateModel existingRateModel = existingById.get(rateResource.getId());
                 if (existingRateModel != null) {
                     log.debug("Updating existing day rate with ID: {}", existingRateModel.getId());
                     rateTableMapper.updateDaySpecificRateFromResource(rateResource, existingRateModel);
                     updatedRates.add(existingRateModel);
                 } else {
                     log.warn("Day rate with ID {} not found, creating new one", rateResource.getId());
-                    RateTableDaySpecificRateModel newRate = rateTableMapper.daySpecificRatePostResourceToModel(rateResource);
+                    DaySpecificRateModel newRate = rateTableMapper.daySpecificRatePostResourceToModel(rateResource);
                     newRate.setRateTable(existingRateTable);
                     updatedRates.add(newRate);
                 }
             } else {
                 log.debug("Creating new day rate for nightly: {}", rateResource.getNightly());
-                RateTableDaySpecificRateModel newRate = rateTableMapper.daySpecificRatePostResourceToModel(rateResource);
+                DaySpecificRateModel newRate = rateTableMapper.daySpecificRatePostResourceToModel(rateResource);
                 newRate.setRateTable(existingRateTable);
                 updatedRates.add(newRate);
             }

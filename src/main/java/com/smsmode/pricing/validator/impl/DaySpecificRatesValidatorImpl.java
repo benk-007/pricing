@@ -1,5 +1,6 @@
 package com.smsmode.pricing.validator.impl;
 
+import com.smsmode.pricing.resource.common.BaseRateResource;
 import com.smsmode.pricing.resource.common.dayspecificrate.DaySpecificRatePostResource;
 import com.smsmode.pricing.resource.defaultrate.DefaultRatePostResource;
 import com.smsmode.pricing.validator.ValidDaySpecificRates;
@@ -13,10 +14,10 @@ import java.util.Set;
 /**
  * Validator to ensure no overlapping days in day-specific rates
  */
-public class DaySpecificRatesValidatorImpl implements ConstraintValidator<ValidDaySpecificRates, DefaultRatePostResource> {
+public class DaySpecificRatesValidatorImpl implements ConstraintValidator<ValidDaySpecificRates, BaseRateResource> {
 
     @Override
-    public boolean isValid(DefaultRatePostResource resource, ConstraintValidatorContext context) {
+    public boolean isValid(BaseRateResource resource, ConstraintValidatorContext context) {
         if (resource == null || resource.getDaySpecificRates() == null || resource.getDaySpecificRates().isEmpty()) {
             return true; // Let other validators handle null cases
         }

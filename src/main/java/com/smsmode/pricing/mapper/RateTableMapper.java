@@ -2,10 +2,7 @@ package com.smsmode.pricing.mapper;
 
 import com.smsmode.pricing.dao.service.RatePlanDaoService;
 import com.smsmode.pricing.embeddable.RatePlanRefEmbeddable;
-import com.smsmode.pricing.model.RatePlanModel;
-import com.smsmode.pricing.model.RateTableAdditionalGuestFeeModel;
-import com.smsmode.pricing.model.RateTableDaySpecificRateModel;
-import com.smsmode.pricing.model.RateTableModel;
+import com.smsmode.pricing.model.*;
 import com.smsmode.pricing.resource.common.additionalguestfee.AdditionalGuestFeeGetResource;
 import com.smsmode.pricing.resource.common.additionalguestfee.AdditionalGuestFeePostResource;
 import com.smsmode.pricing.resource.common.dayspecificrate.DaySpecificRateGetResource;
@@ -15,19 +12,19 @@ import com.smsmode.pricing.resource.ratetable.RateTablePatchResource;
 import com.smsmode.pricing.resource.ratetable.RateTablePostResource;
 import org.mapstruct.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+
 
 /**
  * Mapper for RateTable entities and resources.
  */
 @Mapper(
         componentModel = "spring",
-        collectionMappingStrategy = CollectionMappingStrategy.ADDER_PREFERRED,
         nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE
-)
-public abstract class RateTableMapper {
+)public abstract class RateTableMapper {
 
     private RatePlanDaoService ratePlanDaoService;
 
@@ -58,12 +55,54 @@ public abstract class RateTableMapper {
 
     @AfterMapping
     public void afterPatchMapping(RateTablePatchResource patch, @MappingTarget RateTableModel model) {
-        // Résoudre RatePlan si fourni
+        // Résolution automatique du RatePlan si fourni
         if (patch.getRatePlan() != null && patch.getRatePlan().getUuid() != null) {
             RatePlanModel ratePlan = ratePlanDaoService.findById(patch.getRatePlan().getUuid());
             model.setRatePlan(ratePlan);
         }
     }
+
+    public abstract AdditionalGuestFeeGetResource additionalGuestFeeModelToGetResource(AdditionalGuestFeeModel additionalGuestFeeModel);
+    public abstract AdditionalGuestFeeModel additionalGuestFeePostResourceToModel(AdditionalGuestFeePostResource additionalGuestFeePostResource);
+    public abstract DaySpecificRateGetResource daySpecificRateModelToGetResource(DaySpecificRateModel daySpecificRateModel);
+    public abstract DaySpecificRateModel daySpecificRatePostResourceToModel(DaySpecificRatePostResource daySpecificRatePostResource);
+
+
+    public abstract void updateAdditionalGuestFeeFromResource(AdditionalGuestFeePostResource source, @MappingTarget AdditionalGuestFeeModel target);
+
+    public abstract void updateDaySpecificRateFromResource(DaySpecificRatePostResource source, @MappingTarget DaySpecificRateModel target);
+
+
+    /**
+     * Custom mapping method for additional guest fees collection
+     */
+    @Named("mapAdditionalGuestFees")
+    public List<AdditionalGuestFeeModel> mapAdditionalGuestFees(List<AdditionalGuestFeePostResource> additionalGuestFees) {
+        if (CollectionUtils.isEmpty(additionalGuestFees)) {
+            return new ArrayList<>();
+        }
+        List<AdditionalGuestFeeModel> result = new ArrayList<>();
+        for (AdditionalGuestFeePostResource resource : additionalGuestFees) {
+            result.add(additionalGuestFeePostResourceToModel(resource));
+        }
+        return result;
+    }
+
+    /**
+     * Custom mapping method for day specific rates collection
+     */
+    @Named("mapDaySpecificRates")
+    public List<DaySpecificRateModel> mapDaySpecificRates(List<DaySpecificRatePostResource> daySpecificRates) {
+        if (CollectionUtils.isEmpty(daySpecificRates)) {
+            return new ArrayList<>();
+        }
+        List<DaySpecificRateModel> result = new ArrayList<>();
+        for (DaySpecificRatePostResource resource : daySpecificRates) {
+            result.add(daySpecificRatePostResourceToModel(resource));
+        }
+        return result;
+    }
+
     /**
      * Convertit RatePlanModel vers RatePlanRefEmbeddable pour les GET responses
      * L'ID technique devient l'UUID dans le JSON
@@ -85,61 +124,4 @@ public abstract class RateTableMapper {
         }
         return ratePlanDaoService.findById(ratePlanUuid);
     }
-
-    /**
-     * Custom mapping method for additional guest fees collection.
-     */
-    @Named("mapAdditionalGuestFees")
-    public List<RateTableAdditionalGuestFeeModel> mapAdditionalGuestFees(List<AdditionalGuestFeePostResource> additionalGuestFees) {
-        if (additionalGuestFees == null) {
-            return new ArrayList<>();
-        }
-        List<RateTableAdditionalGuestFeeModel> result = new ArrayList<>();
-        for (AdditionalGuestFeePostResource resource : additionalGuestFees) {
-            result.add(additionalGuestFeePostResourceToModel(resource));
-        }
-        return result;
-    }
-
-    /**
-     * Custom mapping method for day specific rates collection.
-     */
-    @Named("mapDaySpecificRates")
-    public List<RateTableDaySpecificRateModel> mapDaySpecificRates(List<DaySpecificRatePostResource> daySpecificRates) {
-        if (daySpecificRates == null) {
-            return new ArrayList<>();
-        }
-        List<RateTableDaySpecificRateModel> result = new ArrayList<>();
-        for (DaySpecificRatePostResource resource : daySpecificRates) {
-            result.add(daySpecificRatePostResourceToModel(resource));
-        }
-        return result;
-    }
-
-    /**
-     * Maps RateTableAdditionalGuestFeeModel to AdditionalGuestFeeGetResource.
-     */
-    public abstract AdditionalGuestFeeGetResource rateTableAdditionalGuestFeeModelToGetResource(RateTableAdditionalGuestFeeModel rateTableAdditionalGuestFeeModel);
-
-    /**
-     * Maps AdditionalGuestFeePostResource to RateTableAdditionalGuestFeeModel.
-     */
-    public abstract RateTableAdditionalGuestFeeModel additionalGuestFeePostResourceToModel(AdditionalGuestFeePostResource additionalGuestFeePostResource);
-
-    /**
-     * Maps RateTableDaySpecificRateModel to DaySpecificRateGetResource.
-     */
-    public abstract DaySpecificRateGetResource rateTableDaySpecificRateModelToGetResource(RateTableDaySpecificRateModel rateTableDaySpecificRateModel);
-
-    /**
-     * Maps DaySpecificRatePostResource to RateTableDaySpecificRateModel.
-     */
-    public abstract RateTableDaySpecificRateModel daySpecificRatePostResourceToModel(DaySpecificRatePostResource daySpecificRatePostResource);
-
-    public abstract void updateAdditionalGuestFeeFromResource(AdditionalGuestFeePostResource source,
-                                                              @MappingTarget RateTableAdditionalGuestFeeModel target);
-
-    public abstract void updateDaySpecificRateFromResource(DaySpecificRatePostResource source,
-                                                           @MappingTarget RateTableDaySpecificRateModel target);
-
 }

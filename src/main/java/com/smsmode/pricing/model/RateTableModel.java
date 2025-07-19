@@ -64,9 +64,9 @@ public class RateTableModel extends AbstractBaseModel {
     // Collections (same structure as DefaultRate)
     @OneToMany(mappedBy = "rateTable", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("createdAt ASC")
-    private List<RateTableAdditionalGuestFeeModel> additionalGuestFees = new ArrayList<>();
+    private List<AdditionalGuestFeeModel> additionalGuestFees = new ArrayList<>();
 
     @OneToMany(mappedBy = "rateTable", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("createdAt ASC")
-    private List<RateTableDaySpecificRateModel> daySpecificRates = new ArrayList<>();
+    private List<DaySpecificRateModel> daySpecificRates = new ArrayList<>();
 }

@@ -2,23 +2,23 @@ package com.smsmode.pricing.resource.ratetable;
 
 import com.smsmode.pricing.embeddable.RatePlanRefEmbeddable;
 import com.smsmode.pricing.enumeration.RateTableTypeEnum;
-import com.smsmode.pricing.resource.common.additionalguestfee.AdditionalGuestFeePostResource;
-import com.smsmode.pricing.resource.common.dayspecificrate.DaySpecificRatePostResource;
+import com.smsmode.pricing.resource.common.BaseRateResource;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 
 /**
  * Resource for creating rate tables.
  */
 @Data
-public class RateTablePostResource {
+@EqualsAndHashCode(callSuper = true)
+public class RateTablePostResource extends BaseRateResource {
 
     @NotBlank(message = "Rate table name is required")
     private String name;
@@ -49,9 +49,9 @@ public class RateTablePostResource {
     @Valid
     private RatePlanRefEmbeddable ratePlan;
 
-    @Valid
+    /*@Valid
     private List<@Valid DaySpecificRatePostResource> daySpecificRates;
 
     @Valid
-    private List<@Valid AdditionalGuestFeePostResource> additionalGuestFees;
+    private List<@Valid AdditionalGuestFeePostResource> additionalGuestFees;*/
 }
