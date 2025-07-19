@@ -1,9 +1,6 @@
 package com.smsmode.pricing.service.impl;
 
-import com.smsmode.pricing.dao.service.RatePlanDaoService;
 import com.smsmode.pricing.dao.service.RateTableDaoService;
-import com.smsmode.pricing.exception.ConflictException;
-import com.smsmode.pricing.exception.enumeration.ConflictExceptionTitleEnum;
 import com.smsmode.pricing.mapper.RateTableMapper;
 import com.smsmode.pricing.model.*;
 import com.smsmode.pricing.resource.common.additionalguestfee.AdditionalGuestFeePostResource;
@@ -38,7 +35,6 @@ public class RateTableServiceImpl implements RateTableService {
 
     private final RateTableMapper rateTableMapper;
     private final RateTableDaoService rateTableDaoService;
-    private final RatePlanDaoService ratePlanDaoService;
 
     @Override
     public ResponseEntity<RateTableGetResource> create(RateTablePostResource rateTablePostResource) {
@@ -54,9 +50,6 @@ public class RateTableServiceImpl implements RateTableService {
         }
 
         handleCollections(rateTableModel, rateTablePostResource);
-
-        // Validate overlapping dates before saving
-        validateOverlapping(rateTableModel, null);
 
         // Save to database
         rateTableModel = rateTableDaoService.save(rateTableModel);
@@ -110,9 +103,6 @@ public class RateTableServiceImpl implements RateTableService {
 
         updateCollections(existingRateTable, rateTablePatchResource);
 
-        // Validate overlapping dates (excluding current rate table)
-        validateOverlapping(existingRateTable, rateTableId);
-
         // Save updated model
         RateTableModel updatedRateTable = rateTableDaoService.save(existingRateTable);
         log.info("Successfully updated rate table with ID: {}", rateTableId);
@@ -135,45 +125,6 @@ public class RateTableServiceImpl implements RateTableService {
         log.info("Successfully deleted rate table with ID: {}", rateTableId);
 
         return ResponseEntity.noContent().build();
-    }
-
-    /**
-     * Validates overlapping dates for rate tables of same type and rate plan.
-     */
-    private void validateOverlapping(RateTableModel rateTableModel, String excludeId) {
-        log.debug("Validating overlapping dates for rate table: {}", rateTableModel.getName());
-
-        String ratePlanUuid = rateTableModel.getRatePlan().getId();
-        boolean hasOverlap = rateTableDaoService.hasOverlappingRateTables(
-                ratePlanUuid,
-                rateTableModel.getType(),
-                rateTableModel.getStartDate(),
-                rateTableModel.getEndDate(),
-                excludeId
-        );
-
-        if (hasOverlap) {
-            String errorMessage = String.format(
-                    "Rate table dates [%s - %s] overlap with existing rate table of type '%s'. " +
-                            "Please choose different dates or modify the existing rate table.",
-                    rateTableModel.getStartDate(),
-                    rateTableModel.getEndDate(),
-                    rateTableModel.getType()
-            );
-
-            log.warn("Overlapping dates detected for rate table '{}': type={}, dates=[{} - {}]",
-                    rateTableModel.getName(),
-                    rateTableModel.getType(),
-                    rateTableModel.getStartDate(),
-                    rateTableModel.getEndDate());
-
-            throw new ConflictException(
-                    ConflictExceptionTitleEnum.OVERLAPPING_RATE_TABLE_DATES,
-                    errorMessage
-            );
-        }
-
-        log.debug("No overlapping dates found for rate table: {}", rateTableModel.getName());
     }
 
     private void handleCollections(RateTableModel model, RateTablePostResource resource) {
@@ -200,7 +151,6 @@ public class RateTableServiceImpl implements RateTableService {
     }
 
 
-
     /**
      * Updates Additional Guest Fees with 3 scenarios:
      * 1. No ID in request -> CREATE new entity
@@ -213,20 +163,16 @@ public class RateTableServiceImpl implements RateTableService {
 
         List<AdditionalGuestFeeModel> existingFees = existingRateTable.getAdditionalGuestFees();
 
-        // Si newFees est null, ne rien faire (PATCH partiel)
         if (newFees == null) {
             log.debug("No additional guest fees in PATCH request, keeping existing");
             return;
         }
 
-        // Si newFees est une liste vide, supprimer tous les fees existants
         if (newFees.isEmpty()) {
             log.debug("Empty fees list in request, removing all existing fees");
             existingFees.clear();
             return;
         }
-
-        // Créer une map des entités existantes par ID pour lookup rapide
         Map<String, AdditionalGuestFeeModel> existingById = existingFees.stream()
                 .filter(fee -> fee.getId() != null)
                 .collect(Collectors.toMap(
@@ -234,13 +180,10 @@ public class RateTableServiceImpl implements RateTableService {
                         fee -> fee
                 ));
 
-        // Créer une nouvelle collection pour les fees mises à jour
         List<AdditionalGuestFeeModel> updatedFees = new ArrayList<>();
 
-        // Traiter chaque fee dans la requête
         for (AdditionalGuestFeePostResource feeResource : newFees) {
             if (StringUtils.hasText(feeResource.getId())) {
-                // Scénario 2: ID fourni = UPDATE entité existante
                 AdditionalGuestFeeModel existingFee = existingById.get(feeResource.getId());
                 if (existingFee != null) {
                     log.debug("Updating existing fee with ID: {}", existingFee.getId());
@@ -253,7 +196,6 @@ public class RateTableServiceImpl implements RateTableService {
                     updatedFees.add(newFee);
                 }
             } else {
-                // Scénario 1: Pas d'ID = CREATE nouvelle entité
                 log.debug("Creating new fee for guestType: {}", feeResource.getGuestType());
                 AdditionalGuestFeeModel newFee = rateTableMapper.additionalGuestFeePostResourceToModel(feeResource);
                 newFee.setRateTable(existingRateTable);
@@ -261,7 +203,6 @@ public class RateTableServiceImpl implements RateTableService {
             }
         }
 
-        // Remplacer la collection existante par la nouvelle
         existingFees.clear();
         existingFees.addAll(updatedFees);
 
@@ -280,13 +221,11 @@ public class RateTableServiceImpl implements RateTableService {
 
         List<DaySpecificRateModel> existingRates = existingRateTable.getDaySpecificRates();
 
-        // Si newRates est null, ne rien faire (PATCH partiel)
         if (newRates == null) {
             log.debug("No day specific rates in PATCH request, keeping existing");
             return;
         }
 
-        // Si newRates est une liste vide, supprimer tous les rates existants
         if (newRates.isEmpty()) {
             log.debug("Empty rates list in request, removing all existing rates");
             existingRates.clear();

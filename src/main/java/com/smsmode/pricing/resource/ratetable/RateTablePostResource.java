@@ -3,6 +3,7 @@ package com.smsmode.pricing.resource.ratetable;
 import com.smsmode.pricing.embeddable.RatePlanRefEmbeddable;
 import com.smsmode.pricing.enumeration.RateTableTypeEnum;
 import com.smsmode.pricing.resource.common.BaseRateResource;
+import com.smsmode.pricing.validator.ValidRateTableDates;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -18,6 +19,7 @@ import java.time.LocalDate;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
+@ValidRateTableDates
 public class RateTablePostResource extends BaseRateResource {
 
     @NotBlank(message = "Rate table name is required")
@@ -48,10 +50,4 @@ public class RateTablePostResource extends BaseRateResource {
     @NotNull(message = "Rate plan information is required")
     @Valid
     private RatePlanRefEmbeddable ratePlan;
-
-    /*@Valid
-    private List<@Valid DaySpecificRatePostResource> daySpecificRates;
-
-    @Valid
-    private List<@Valid AdditionalGuestFeePostResource> additionalGuestFees;*/
 }

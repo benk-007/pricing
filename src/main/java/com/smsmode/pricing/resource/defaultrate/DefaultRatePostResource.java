@@ -38,10 +38,4 @@ public class DefaultRatePostResource extends BaseRateResource {
     @Valid
     @NotNull(message = "Unit information is required")
     private UnitRefEmbeddable unit;
-
-//    @Valid
-//    private List<@Valid DaySpecificRatePostResource> daySpecificRates;
-//
-//    @Valid
-//    private List<@Valid AdditionalGuestFeePostResource> additionalGuestFees;
 }
