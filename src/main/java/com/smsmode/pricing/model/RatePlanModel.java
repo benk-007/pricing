@@ -8,6 +8,9 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Entity representing a rate plan in the pricing system.
  */
@@ -31,4 +34,8 @@ public class RatePlanModel extends AbstractBaseModel {
 
     @Embedded
     private UnitRefEmbeddable unit;
+
+    // Bidirectional relationship with RateTable (no cascade)
+    @OneToMany(mappedBy = "ratePlan", fetch = FetchType.LAZY)
+    private List<RateTableModel> rateTables = new ArrayList<>();
 }

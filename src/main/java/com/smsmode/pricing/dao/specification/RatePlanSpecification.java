@@ -10,27 +10,39 @@ import org.springframework.util.ObjectUtils;
 public class RatePlanSpecification {
 
     /**
-     * Creates specification to find rate plans by segment UUID.
+     * Creates specification to search by rate plan name.
      */
-    public static Specification<RatePlanModel> withSegmentUuid(String segmentUuid) {
+    public static Specification<RatePlanModel> withNameContaining(String name) {
         return (root, query, criteriaBuilder) ->
-                ObjectUtils.isEmpty(segmentUuid) ? criteriaBuilder.conjunction() :
-                        criteriaBuilder.equal(root.get("segment").get("uuid"), segmentUuid);
+                ObjectUtils.isEmpty(name) ? criteriaBuilder.conjunction() :
+                        criteriaBuilder.like(
+                                criteriaBuilder.lower(root.get("name")),
+                                "%" + name.toLowerCase() + "%"
+                        );
     }
 
     /**
-     * Creates specification to find rate plans by segment and sub-segment UUIDs.
+     * Creates specification to search by segment name.
      */
-    public static Specification<RatePlanModel> withSegmentAndSubSegment(String segmentUuid, String subSegmentUuid) {
-        return (root, query, criteriaBuilder) -> {
-            if (ObjectUtils.isEmpty(segmentUuid) || ObjectUtils.isEmpty(subSegmentUuid)) {
-                return criteriaBuilder.conjunction();
-            }
-            return criteriaBuilder.and(
-                    criteriaBuilder.equal(root.get("segment").get("uuid"), segmentUuid),
-                    criteriaBuilder.equal(root.get("subSegment").get("uuid"), subSegmentUuid)
-            );
-        };
+    public static Specification<RatePlanModel> withSegmentNameContaining(String segmentName) {
+        return (root, query, criteriaBuilder) ->
+                ObjectUtils.isEmpty(segmentName) ? criteriaBuilder.conjunction() :
+                        criteriaBuilder.like(
+                                criteriaBuilder.lower(root.get("segment").get("name")),
+                                "%" + segmentName.toLowerCase() + "%"
+                        );
+    }
+
+    /**
+     * Creates specification to search by sub-segment name.
+     */
+    public static Specification<RatePlanModel> withSubSegmentNameContaining(String subSegmentName) {
+        return (root, query, criteriaBuilder) ->
+                ObjectUtils.isEmpty(subSegmentName) ? criteriaBuilder.conjunction() :
+                        criteriaBuilder.like(
+                                criteriaBuilder.lower(root.get("subSegment").get("name")),
+                                "%" + subSegmentName.toLowerCase() + "%"
+                        );
     }
 
     /**

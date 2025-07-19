@@ -29,7 +29,7 @@ public interface RatePlanDaoService {
     /**
      * Finds all rate plans related to a unit with pagination.
      */
-    Page<RatePlanModel> findByUnitId(String unitId, Pageable pageable);
+    Page<RatePlanModel> findByUnitId(String unitId, String search, String segmentName, String subSegmentName, Pageable pageable);
 
     /**
      * Finds a rate plan by its ID.

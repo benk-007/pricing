@@ -15,7 +15,8 @@ public enum ResourceNotFoundExceptionTitleEnum implements BaseExceptionEnum {
 
 
     DEFAULT_RATE_NOT_FOUND("PRC_RNF_ERR_1"),
-    RATE_PLAN_NOT_FOUND("PRC_RNF_ERR_2");
+    RATE_PLAN_NOT_FOUND("PRC_RNF_ERR_2"),
+    RATE_TABLE_NOT_FOUND("PRC_RNF_ERR_3");
 
 
 

@@ -73,8 +73,17 @@ public class RatePlanDaoServiceImpl implements RatePlanDaoService {
     }
 
     @Override
-    public Page<RatePlanModel> findByUnitId(String unitId, Pageable pageable) {
-        Specification<RatePlanModel> specification = RatePlanSpecification.withUnitUuid(unitId);
+    public Page<RatePlanModel> findByUnitId(String unitId, String search, String segmentName, String subSegmentName, Pageable pageable) {
+        log.debug("Finding rate plans for unit: {} with filters - search: {}, segmentName: {}, subSegmentName: {}",
+                unitId, search, segmentName, subSegmentName);
+
+        // Build specification with all filters
+        Specification<RatePlanModel> specification = Specification
+                .where(RatePlanSpecification.withUnitUuid(unitId))
+                .and(RatePlanSpecification.withNameContaining(search))
+                .and(RatePlanSpecification.withSegmentNameContaining(segmentName))
+                .and(RatePlanSpecification.withSubSegmentNameContaining(subSegmentName));
+
         return ratePlanRepository.findAll(specification, pageable);
     }
 

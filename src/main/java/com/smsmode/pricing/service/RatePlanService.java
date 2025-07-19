@@ -20,7 +20,7 @@ public interface RatePlanService {
     /**
      * Retrieves all rate plans with pagination.
      */
-    ResponseEntity<Page<RatePlanGetResource>> getAll(String unitId, Pageable pageable);
+    ResponseEntity<Page<RatePlanGetResource>> getAll(String unitId, String search, String segmentName, String subSegmentName, Pageable pageable);
 
     /**
      * Retrieves a rate plan by its ID.

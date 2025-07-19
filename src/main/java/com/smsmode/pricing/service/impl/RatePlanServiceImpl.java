@@ -54,11 +54,11 @@ public class RatePlanServiceImpl implements RatePlanService {
 
     @Override
     @Transactional(readOnly = true)
-    public ResponseEntity<Page<RatePlanGetResource>> getAll(String unitId, Pageable pageable) {
+    public ResponseEntity<Page<RatePlanGetResource>> getAll(String unitId, String search, String segmentName, String subSegmentName, Pageable pageable) {
         log.debug("Retrieving all rate plans with pagination");
 
         // Get paginated data from database
-        Page<RatePlanModel> ratePlanModelPage = ratePlanDaoService.findByUnitId(unitId, pageable);
+        Page<RatePlanModel> ratePlanModelPage = ratePlanDaoService.findByUnitId(unitId, search, segmentName, subSegmentName, pageable);
         log.info("Retrieved {} rate plans from database", ratePlanModelPage.getTotalElements());
 
         // Transform models to GET resources
