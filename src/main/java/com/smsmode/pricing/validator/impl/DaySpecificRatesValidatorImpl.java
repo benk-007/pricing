@@ -2,7 +2,6 @@ package com.smsmode.pricing.validator.impl;
 
 import com.smsmode.pricing.resource.common.BaseRateResource;
 import com.smsmode.pricing.resource.common.dayspecificrate.DaySpecificRatePostResource;
-import com.smsmode.pricing.resource.defaultrate.DefaultRatePostResource;
 import com.smsmode.pricing.validator.ValidDaySpecificRates;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;

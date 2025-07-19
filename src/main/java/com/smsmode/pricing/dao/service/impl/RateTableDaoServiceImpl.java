@@ -69,7 +69,6 @@ public class RateTableDaoServiceImpl implements RateTableDaoService {
         Specification<RateTableModel> specification = Specification
                 .where(RateTableSpecification.withOverlappingDates(ratePlanUuid, type, startDate, endDate));
 
-        // Exclude current rate table for UPDATE operations
         if (excludeId != null) {
             specification = specification.and(RateTableSpecification.excludingId(excludeId));
         }

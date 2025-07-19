@@ -152,7 +152,6 @@ public class DefaultRateServiceImpl implements DefaultRateService {
                 if (existingFee != null) {
                     log.debug("Updating existing fee with ID: {}", existingFee.getId());
 
-                    // ✅ Utiliser MapStruct pour mapper les nouvelles valeurs
                     defaultRateMapper.updateAdditionalGuestFeeFromResource(feeResource, existingFee);
 
                     updatedFees.add(existingFee);
@@ -210,7 +209,6 @@ public class DefaultRateServiceImpl implements DefaultRateService {
                 if (existingRateModel != null) {
                     log.debug("Updating existing day rate with ID: {}", existingRateModel.getId());
 
-                    // ✅ Utiliser MapStruct pour mapper les nouvelles valeurs
                     defaultRateMapper.updateDaySpecificRateFromResource(rateResource, existingRateModel);
 
                     updatedRates.add(existingRateModel);

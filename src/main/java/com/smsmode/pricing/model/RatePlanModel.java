@@ -35,7 +35,6 @@ public class RatePlanModel extends AbstractBaseModel {
     @Embedded
     private UnitRefEmbeddable unit;
 
-    // Bidirectional relationship with RateTable (no cascade)
     @OneToMany(mappedBy = "ratePlan", fetch = FetchType.LAZY)
     private List<RateTableModel> rateTables = new ArrayList<>();
 }

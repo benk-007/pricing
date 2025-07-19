@@ -24,6 +24,8 @@ public class RateTableGetResource {
 
     // Standard fields
     private BigDecimal nightly;
+
+    //Standard & Dynamic fields
     private Integer minStay;
     private Integer maxStay;
 

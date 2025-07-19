@@ -9,7 +9,6 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -18,7 +17,6 @@ import java.time.LocalDate;
  * Resource for creating rate tables.
  */
 @Data
-@EqualsAndHashCode(callSuper = true)
 @ValidRateTableDates
 public class RateTablePostResource extends BaseRateResource {
 

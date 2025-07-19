@@ -10,7 +10,6 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 import java.math.BigDecimal;
 
@@ -21,9 +20,6 @@ import java.math.BigDecimal;
  * <p>Created 15 Jul 2025</p>
  */
 @Data
-//@ValidGuestFees
-//@ValidDaySpecificRates
-@EqualsAndHashCode(callSuper = true)
 public class DefaultRatePostResource extends BaseRateResource {
 
     @NotNull(message = "Nightly rate is required")

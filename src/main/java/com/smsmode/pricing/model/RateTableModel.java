@@ -33,10 +33,11 @@ public class RateTableModel extends AbstractBaseModel {
     @Column(name = "TYPE", nullable = false)
     private RateTableTypeEnum type = RateTableTypeEnum.STANDARD;
 
-    // Standard fields (same as DefaultRate)
+    // Standard fields (only for STANDARD type)
     @Column(name = "NIGHTLY")
     private BigDecimal nightly;
 
+    // STANDARD & Dynamic fields
     @Column(name = "MIN_STAY")
     private Integer minStay;
 
@@ -56,12 +57,10 @@ public class RateTableModel extends AbstractBaseModel {
     @Column(name = "MAX_OCCUPANCY")
     private Integer maxOccupancy;
 
-    // Relationship with RatePlan (bidirectional, no cascade)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "RATE_PLAN_ID", nullable = false)
     private RatePlanModel ratePlan;
 
-    // Collections (same structure as DefaultRate)
     @OneToMany(mappedBy = "rateTable", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("createdAt ASC")
     private List<AdditionalGuestFeeModel> additionalGuestFees = new ArrayList<>();

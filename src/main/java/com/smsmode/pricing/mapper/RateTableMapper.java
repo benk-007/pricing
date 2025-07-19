@@ -104,8 +104,7 @@ import java.util.List;
     }
 
     /**
-     * Convertit RatePlanModel vers RatePlanRefEmbeddable pour les GET responses
-     * L'ID technique devient l'UUID dans le JSON
+     * Convert RatePlanModel to RatePlanRefEmbeddable
      */
     @Named("mapRatePlanToRef")
     public RatePlanRefEmbeddable mapRatePlanToRef(RateTableModel rateTableModel) {
@@ -115,9 +114,6 @@ import java.util.List;
         return new RatePlanRefEmbeddable(rateTableModel.getRatePlan().getId());
     }
 
-    /**
-     * Résout un RatePlan à partir de son UUID (qui est en fait l'ID technique)
-     */
     public RatePlanModel resolveRatePlan(String ratePlanUuid) {
         if (ratePlanUuid == null) {
             return null;
