@@ -17,6 +17,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -39,37 +40,15 @@ public class RatePlanDaoServiceImpl implements RatePlanDaoService {
     }
 
     @Override
-    public List<RatePlanModel> findEnabledRatePlansWithSameCombination(Set<String> segmentUuids) {
-        log.debug("Finding enabled rate plans with segments: {}", segmentUuids);
-
-        Specification<RatePlanModel> spec;
-
+    public List<RatePlanModel> findEnabledRatePlansWithOverlappingSegments(Set<String> segmentUuids) {
         if (CollectionUtils.isEmpty(segmentUuids)) {
-            // Cas où aucun segment n'est fourni - chercher les rate plans sans segments
-            spec = (root, query, criteriaBuilder) -> criteriaBuilder.and(
-                    criteriaBuilder.isEmpty(root.get("segment")),
-                    criteriaBuilder.equal(root.get("enabled"), true)
-            );
-        }else {
-            // Utiliser une requête JPQL pour comparer les Sets de segments
-            String jpql = """
-        SELECT DISTINCT rp FROM RatePlanModel rp 
-        LEFT JOIN rp.segment s
-        WHERE rp.enabled = true 
-        GROUP BY rp.id, rp.name, rp.enabled, rp.unit, rp.createdAt, rp.modifiedAt, rp.createdBy, rp.modifiedBy
-        HAVING COUNT(s) = :segmentCount
-        AND COUNT(CASE WHEN s.uuid IN :segmentUuids THEN 1 END) = :segmentCount
-    """;
-
-            TypedQuery<RatePlanModel> query = entityManager.createQuery(jpql, RatePlanModel.class);
-            query.setParameter("segmentUuids", segmentUuids);
-            query.setParameter("segmentCount", (long) segmentUuids.size());
-
-            return query.getResultList();
+            return Collections.emptyList();
         }
 
+        Specification<RatePlanModel> spec = RatePlanSpecification.withOverlappingSegments(segmentUuids);
         return ratePlanRepository.findAll(spec);
     }
+
 
     @Override
     public void disableRatePlans(List<RatePlanModel> ratePlansToDisable) {

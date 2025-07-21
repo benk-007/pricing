@@ -18,9 +18,9 @@ public interface RatePlanDaoService {
     RatePlanModel save(RatePlanModel ratePlanModel);
 
     /**
-     * Finds rate plans with same combination and enabled=true.
+     * Finds rate plans that have at least one segment in common with the given segments.
      */
-    List<RatePlanModel> findEnabledRatePlansWithSameCombination(Set<String> segmentUuids);
+    List<RatePlanModel> findEnabledRatePlansWithOverlappingSegments(Set<String> segmentUuids);
 
     /**
      * Disables multiple rate plans by setting enabled=false.

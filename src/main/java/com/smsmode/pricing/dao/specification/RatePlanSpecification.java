@@ -41,6 +41,23 @@ public class RatePlanSpecification {
     }
 
     /**
+     * Finds rate plans that have at least one segment in common with the given segments.
+     */
+    public static Specification<RatePlanModel> withOverlappingSegments(Set<String> segmentUuids) {
+        return (root, query, criteriaBuilder) -> {
+            if (CollectionUtils.isEmpty(segmentUuids)) {
+                return criteriaBuilder.disjunction(); // Retourne false (aucun résultat)
+            }
+
+            Join<RatePlanModel, SegmentRefEmbeddable> segmentJoin = root.join("segment");
+            return criteriaBuilder.and(
+                    criteriaBuilder.equal(root.get("enabled"), true),
+                    segmentJoin.get("uuid").in(segmentUuids)
+            );
+        };
+    }
+
+    /**
      * Creates specification to search by segment names in the Set.
      */
     public static Specification<RatePlanModel> withSegmentNamesContaining(String segmentName) {

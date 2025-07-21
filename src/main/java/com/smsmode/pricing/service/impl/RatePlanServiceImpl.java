@@ -2,6 +2,8 @@ package com.smsmode.pricing.service.impl;
 
 import com.smsmode.pricing.dao.service.RatePlanDaoService;
 import com.smsmode.pricing.embeddable.SegmentRefEmbeddable;
+import com.smsmode.pricing.exception.ConflictException;
+import com.smsmode.pricing.exception.enumeration.ConflictExceptionTitleEnum;
 import com.smsmode.pricing.mapper.RatePlanMapper;
 import com.smsmode.pricing.model.RatePlanModel;
 import com.smsmode.pricing.resource.rateplan.RatePlanGetResource;
@@ -40,9 +42,9 @@ public class RatePlanServiceImpl implements RatePlanService {
         // Transform POST resource to model
         RatePlanModel ratePlanModel = ratePlanMapper.postResourceToModel(ratePlanPostResource);
 
-        // If new rate plan is enabled, disable competitors
+        // If new rate plan is enabled, validate segment uniqueness
         if (Boolean.TRUE.equals(ratePlanModel.getEnabled())) {
-            disableCompetitors(ratePlanModel);
+            validateSegmentUniqueness(ratePlanModel, null);
         }
 
         // Save to database
@@ -95,9 +97,9 @@ public class RatePlanServiceImpl implements RatePlanService {
         // Update model with new data
         ratePlanMapper.updateModelFromPatchResource(ratePlanPatchResource, existingRatePlan);
 
-        // If updated rate plan is enabled, disable competitors
+        // If updated rate plan is enabled, validate segment uniqueness
         if (Boolean.TRUE.equals(existingRatePlan.getEnabled())) {
-            disableCompetitors(existingRatePlan);
+            validateSegmentUniqueness(existingRatePlan, ratePlanId);
         }
 
         // Save updated model
@@ -111,29 +113,45 @@ public class RatePlanServiceImpl implements RatePlanService {
     }
 
     /**
-     * Disables competitor rate plans with same combination.
+     * Validates that segments are not already used by other enabled rate plans.
      */
-    private void disableCompetitors(RatePlanModel ratePlanModel) {
-        log.debug("Disabling competitors for rate plan: {}", ratePlanModel.getName());
-
-        // Extraire les UUIDs des segments
+    private void validateSegmentUniqueness(RatePlanModel ratePlanModel, String excludeRatePlanId) {
         Set<String> segmentUuids = ratePlanModel.getSegment().stream()
                 .map(SegmentRefEmbeddable::getUuid)
                 .collect(Collectors.toSet());
 
-        // Trouver les concurrents avec la même combinaison de segments
-        List<RatePlanModel> competitors = ratePlanDaoService.findEnabledRatePlansWithSameCombination(segmentUuids);
+        List<RatePlanModel> overlappingPlans = ratePlanDaoService
+                .findEnabledRatePlansWithOverlappingSegments(segmentUuids);
 
-        // Supprimer le rate plan actuel de la liste des concurrents (pour le cas UPDATE)
-        competitors.removeIf(competitor -> competitor.getId().equals(ratePlanModel.getId()));
+        // Exclure le rate plan actuel (pour les updates)
+        if (excludeRatePlanId != null) {
+            overlappingPlans.removeIf(plan -> plan.getId().equals(excludeRatePlanId));
+        }
 
-        if (!competitors.isEmpty()) {
-            log.info("Found {} competitors to disable", competitors.size());
-            ratePlanDaoService.disableRatePlans(competitors);
-        } else {
-            log.debug("No competitors found");
+        if (!overlappingPlans.isEmpty()) {
+            // Trouver quel segment est en conflit
+            RatePlanModel conflictingPlan = overlappingPlans.get(0);
+            String conflictingSegment = findConflictingSegment(ratePlanModel, conflictingPlan);
+
+            throw new ConflictException(
+                    ConflictExceptionTitleEnum.SEGMENT_ALREADY_EXISTS,
+                    String.format("%s already exists in %s", conflictingSegment, conflictingPlan.getName())
+            );
         }
     }
+
+    private String findConflictingSegment(RatePlanModel newPlan, RatePlanModel existingPlan) {
+        Set<String> newSegments = newPlan.getSegment().stream()
+                .map(SegmentRefEmbeddable::getUuid)
+                .collect(Collectors.toSet());
+
+        return existingPlan.getSegment().stream()
+                .map(SegmentRefEmbeddable::getUuid)
+                .filter(newSegments::contains)
+                .findFirst()
+                .orElse("unknown segment");
+    }
+
 
     @Override
     public ResponseEntity<Void> delete(String ratePlanId) {
