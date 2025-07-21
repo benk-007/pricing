@@ -13,10 +13,11 @@ package com.smsmode.pricing.exception.enumeration;
  */
 public enum ResourceNotFoundExceptionTitleEnum implements BaseExceptionEnum {
 
-    /**
-     * Resource not found exception title: Unit not found.
-     */
-    DEFAULT_RATE_NOT_FOUND("PRC_RNF_ERR_1");
+
+    DEFAULT_RATE_NOT_FOUND("PRC_RNF_ERR_1"),
+    RATE_PLAN_NOT_FOUND("PRC_RNF_ERR_2"),
+    RATE_TABLE_NOT_FOUND("PRC_RNF_ERR_3");
+
 
 
 

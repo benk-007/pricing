@@ -8,7 +8,6 @@ import com.smsmode.pricing.resource.defaultrate.DefaultRateGetResource;
 import com.smsmode.pricing.resource.defaultrate.DefaultRatePostResource;
 import org.springframework.http.ResponseEntity;
 
-import java.util.List;
 
 
 /**

@@ -13,7 +13,8 @@ package com.smsmode.pricing.exception.enumeration;
  * <p>Created 13 Mar 2025
  */
 public enum ConflictExceptionTitleEnum implements BaseExceptionEnum {
-    PASSWORD_MISMATCH("UAA_CFT_ERR_1");
+    PASSWORD_MISMATCH("UAA_CFT_ERR_1"),
+    OVERLAPPING_RATE_TABLE_DATES("PRC_CFT_ERR_2");
     private final String code;
 
     /**

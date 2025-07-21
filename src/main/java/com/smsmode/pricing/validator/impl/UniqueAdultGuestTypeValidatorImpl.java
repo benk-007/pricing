@@ -1,34 +1,26 @@
-/**
- * <p>Copyright (C) Calade Technologies, Inc - All Rights Reserved Unauthorized copying of this
- * file, via any medium is strictly prohibited Proprietary and confidential
- */
 package com.smsmode.pricing.validator.impl;
 
 import com.smsmode.pricing.embeddable.AgeBucketEmbeddable;
 import com.smsmode.pricing.enumeration.GuestTypeEnum;
+import com.smsmode.pricing.resource.common.BaseRateResource;
 import com.smsmode.pricing.resource.common.additionalguestfee.AdditionalGuestFeePostResource;
-import com.smsmode.pricing.resource.defaultrate.DefaultRatePostResource;
 import com.smsmode.pricing.validator.ValidGuestFees;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
 
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
  * Validator for additional guest fees ensuring:
  * 1. Only one ADULT guest type is allowed
  * 2. No overlapping age buckets for CHILD guest types
- *
- * @author hamzahabchi (contact: hamza.habchi@messaging-technologies.com)
- * <p>Created 15 Jul 2025</p>
  */
-public class UniqueAdultGuestTypeValidatorImpl implements ConstraintValidator<ValidGuestFees, DefaultRatePostResource> {
+public class UniqueAdultGuestTypeValidatorImpl implements ConstraintValidator<ValidGuestFees, BaseRateResource> {
 
     @Override
-    public boolean isValid(DefaultRatePostResource resource, ConstraintValidatorContext context) {
+    public boolean isValid(BaseRateResource resource, ConstraintValidatorContext context) {
         if (resource == null || resource.getAdditionalGuestFees() == null) {
             return true;
         }
