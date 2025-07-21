@@ -29,9 +29,9 @@ public class RatePlanControllerImpl implements RatePlanController {
     }
 
     @Override
-    public ResponseEntity<Page<RatePlanGetResource>> getAll(String unitId, String search, String segmentName, String subSegmentName, Pageable pageable) {
+    public ResponseEntity<Page<RatePlanGetResource>> getAll(String unitId, String search, String segmentName, Pageable pageable) {
         log.debug("GET /rate-plans - Retrieving all rate plans with pagination");
-        return ratePlanService.getAll(unitId, search, segmentName, subSegmentName, pageable);
+        return ratePlanService.getAll(unitId, search, segmentName, pageable);
     }
 
     @Override

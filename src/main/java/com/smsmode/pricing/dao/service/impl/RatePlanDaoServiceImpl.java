@@ -6,14 +6,19 @@ import com.smsmode.pricing.dao.specification.RatePlanSpecification;
 import com.smsmode.pricing.exception.ResourceNotFoundException;
 import com.smsmode.pricing.exception.enumeration.ResourceNotFoundExceptionTitleEnum;
 import com.smsmode.pricing.model.RatePlanModel;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * Implementation of RatePlanDaoService for managing rate plan data access.
@@ -24,6 +29,8 @@ import java.util.List;
 public class RatePlanDaoServiceImpl implements RatePlanDaoService {
 
     private final RatePlanRepository ratePlanRepository;
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Override
     public RatePlanModel save(RatePlanModel ratePlanModel) {
@@ -32,32 +39,33 @@ public class RatePlanDaoServiceImpl implements RatePlanDaoService {
     }
 
     @Override
-    public List<RatePlanModel> findEnabledRatePlansWithSameCombination(String segmentUuid, String subSegmentUuid) {
-        log.debug("Finding enabled rate plans with segment: {}, subSegment: {}", segmentUuid, subSegmentUuid);
+    public List<RatePlanModel> findEnabledRatePlansWithSameCombination(Set<String> segmentUuids) {
+        log.debug("Finding enabled rate plans with segments: {}", segmentUuids);
 
         Specification<RatePlanModel> spec;
 
-        // Case 1: Name only (segment=null, subSegment=null)
-        if (segmentUuid == null && subSegmentUuid == null) {
+        if (CollectionUtils.isEmpty(segmentUuids)) {
+            // Cas où aucun segment n'est fourni - chercher les rate plans sans segments
             spec = (root, query, criteriaBuilder) -> criteriaBuilder.and(
-                    criteriaBuilder.isNull(root.get("segment")),
+                    criteriaBuilder.isEmpty(root.get("segment")),
                     criteriaBuilder.equal(root.get("enabled"), true)
             );
-        }// Case 2: name + segment (subSegment=null)
-        else if (subSegmentUuid == null) {
+        }else {
+            // Utiliser une requête JPQL pour comparer les Sets de segments
+            String jpql = """
+        SELECT DISTINCT rp FROM RatePlanModel rp 
+        LEFT JOIN rp.segment s
+        WHERE rp.enabled = true 
+        GROUP BY rp.id, rp.name, rp.enabled, rp.unit, rp.createdAt, rp.modifiedAt, rp.createdBy, rp.modifiedBy
+        HAVING COUNT(s) = :segmentCount
+        AND COUNT(CASE WHEN s.uuid IN :segmentUuids THEN 1 END) = :segmentCount
+    """;
 
-            spec = (root, query, criteriaBuilder) -> criteriaBuilder.and(
-                    criteriaBuilder.equal(root.get("segment").get("uuid"), segmentUuid),
-                    criteriaBuilder.isNull(root.get("subSegment")),
-                    criteriaBuilder.equal(root.get("enabled"), true)
-            );
-        }// Case 3: name + segment + subSegment
-        else {
-            spec = (root, query, criteriaBuilder) -> criteriaBuilder.and(
-                    criteriaBuilder.equal(root.get("segment").get("uuid"), segmentUuid),
-                    criteriaBuilder.equal(root.get("subSegment").get("uuid"), subSegmentUuid),
-                    criteriaBuilder.equal(root.get("enabled"), true)
-            );
+            TypedQuery<RatePlanModel> query = entityManager.createQuery(jpql, RatePlanModel.class);
+            query.setParameter("segmentUuids", segmentUuids);
+            query.setParameter("segmentCount", (long) segmentUuids.size());
+
+            return query.getResultList();
         }
 
         return ratePlanRepository.findAll(spec);
@@ -73,17 +81,15 @@ public class RatePlanDaoServiceImpl implements RatePlanDaoService {
     }
 
     @Override
-    public Page<RatePlanModel> findByUnitId(String unitId, String search, String segmentName, String subSegmentName, Pageable pageable) {
-        log.debug("Finding rate plans for unit: {} with filters - search: {}, segmentName: {}, subSegmentName: {}",
-                unitId, search, segmentName, subSegmentName);
+    public Page<RatePlanModel> findByUnitId(String unitId, String search, String segmentName, Pageable pageable) {
+        log.debug("Finding rate plans for unit: {} with filters - search: {}, segmentName: {}",
+                unitId, search, segmentName);
 
         // Build specification with all filters
         Specification<RatePlanModel> specification = Specification
                 .where(RatePlanSpecification.withUnitUuid(unitId))
                 .and(RatePlanSpecification.withNameContaining(search))
-                .and(RatePlanSpecification.withSegmentNameContaining(segmentName))
-                .and(RatePlanSpecification.withSubSegmentNameContaining(subSegmentName));
-
+                .and(RatePlanSpecification.withSegmentNamesContaining(segmentName));
         return ratePlanRepository.findAll(specification, pageable);
     }
 

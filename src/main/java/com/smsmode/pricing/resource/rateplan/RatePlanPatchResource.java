@@ -1,9 +1,10 @@
 package com.smsmode.pricing.resource.rateplan;
 
 import com.smsmode.pricing.embeddable.SegmentRefEmbeddable;
-import com.smsmode.pricing.embeddable.SubSegmentRefEmbeddable;
 import com.smsmode.pricing.embeddable.UnitRefEmbeddable;
 import lombok.Data;
+
+import java.util.Set;
 
 /**
  * Resource for creating and updating rate plans.
@@ -11,8 +12,7 @@ import lombok.Data;
 @Data
 public class RatePlanPatchResource {
     private String name;
-    private SegmentRefEmbeddable segment;
-    private SubSegmentRefEmbeddable subSegment;
+    private Set<SegmentRefEmbeddable> segment;
     private Boolean enabled = false;
     private UnitRefEmbeddable unit;
 }

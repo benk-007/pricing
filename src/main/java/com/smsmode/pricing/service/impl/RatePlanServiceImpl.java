@@ -1,6 +1,7 @@
 package com.smsmode.pricing.service.impl;
 
 import com.smsmode.pricing.dao.service.RatePlanDaoService;
+import com.smsmode.pricing.embeddable.SegmentRefEmbeddable;
 import com.smsmode.pricing.mapper.RatePlanMapper;
 import com.smsmode.pricing.model.RatePlanModel;
 import com.smsmode.pricing.resource.rateplan.RatePlanGetResource;
@@ -17,6 +18,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of RatePlanService for managing rate plan business operations.
@@ -54,11 +57,11 @@ public class RatePlanServiceImpl implements RatePlanService {
 
     @Override
     @Transactional(readOnly = true)
-    public ResponseEntity<Page<RatePlanGetResource>> getAll(String unitId, String search, String segmentName, String subSegmentName, Pageable pageable) {
+    public ResponseEntity<Page<RatePlanGetResource>> getAll(String unitId, String search, String segmentName, Pageable pageable) {
         log.debug("Retrieving all rate plans with pagination");
 
         // Get paginated data from database
-        Page<RatePlanModel> ratePlanModelPage = ratePlanDaoService.findByUnitId(unitId, search, segmentName, subSegmentName, pageable);
+        Page<RatePlanModel> ratePlanModelPage = ratePlanDaoService.findByUnitId(unitId, search, segmentName, pageable);
         log.info("Retrieved {} rate plans from database", ratePlanModelPage.getTotalElements());
 
         // Transform models to GET resources
@@ -113,14 +116,15 @@ public class RatePlanServiceImpl implements RatePlanService {
     private void disableCompetitors(RatePlanModel ratePlanModel) {
         log.debug("Disabling competitors for rate plan: {}", ratePlanModel.getName());
 
-        // Extract combination values
-        String segmentUuid = ratePlanModel.getSegment() != null ? ratePlanModel.getSegment().getUuid() : null;
-        String subSegmentUuid = ratePlanModel.getSubSegment() != null ? ratePlanModel.getSubSegment().getUuid() : null;
+        // Extraire les UUIDs des segments
+        Set<String> segmentUuids = ratePlanModel.getSegment().stream()
+                .map(SegmentRefEmbeddable::getUuid)
+                .collect(Collectors.toSet());
 
-        // Find competitors with same combination
-        List<RatePlanModel> competitors = ratePlanDaoService.findEnabledRatePlansWithSameCombination(segmentUuid, subSegmentUuid);
+        // Trouver les concurrents avec la même combinaison de segments
+        List<RatePlanModel> competitors = ratePlanDaoService.findEnabledRatePlansWithSameCombination(segmentUuids);
 
-        // Remove current rate plan from competitors (for UPDATE case)
+        // Supprimer le rate plan actuel de la liste des concurrents (pour le cas UPDATE)
         competitors.removeIf(competitor -> competitor.getId().equals(ratePlanModel.getId()));
 
         if (!competitors.isEmpty()) {

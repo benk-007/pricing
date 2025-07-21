@@ -40,5 +40,6 @@ public abstract class RatePlanMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "unit", ignore = true)
     public abstract void updateModelFromPatchResource(RatePlanPatchResource ratePlanPatchResource, @MappingTarget RatePlanModel ratePlanModel);
 }

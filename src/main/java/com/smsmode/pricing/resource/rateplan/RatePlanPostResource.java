@@ -1,12 +1,14 @@
 package com.smsmode.pricing.resource.rateplan;
 
 import com.smsmode.pricing.embeddable.SegmentRefEmbeddable;
-import com.smsmode.pricing.embeddable.SubSegmentRefEmbeddable;
 import com.smsmode.pricing.embeddable.UnitRefEmbeddable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Resource for creating and updating rate plans.
@@ -18,10 +20,7 @@ public class RatePlanPostResource {
     private String name;
 
     @Valid
-    private SegmentRefEmbeddable segment;
-
-    @Valid
-    private SubSegmentRefEmbeddable subSegment;
+    private Set<SegmentRefEmbeddable> segment = new HashSet<>();
 
     @NotNull(message = "Enabled status is required")
     private Boolean enabled = false;

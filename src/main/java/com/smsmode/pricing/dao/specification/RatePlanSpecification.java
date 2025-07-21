@@ -1,8 +1,13 @@
 package com.smsmode.pricing.dao.specification;
 
+import com.smsmode.pricing.embeddable.SegmentRefEmbeddable;
 import com.smsmode.pricing.model.RatePlanModel;
+import jakarta.persistence.criteria.Join;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
+
+import java.util.Set;
 
 /**
  * Specification class for RatePlanModel queries.
@@ -22,28 +27,31 @@ public class RatePlanSpecification {
     }
 
     /**
-     * Creates specification to search by segment name.
+     * Creates specification to search by segment UUIDs in the Set.
      */
-    public static Specification<RatePlanModel> withSegmentNameContaining(String segmentName) {
+    public static Specification<RatePlanModel> withSegmentUuids(Set<String> segmentUuids) {
+        return (root, query, criteriaBuilder) -> {
+            if (CollectionUtils.isEmpty(segmentUuids)) {
+                return criteriaBuilder.isEmpty(root.get("segment"));
+            }
+
+            Join<RatePlanModel, SegmentRefEmbeddable> segmentJoin = root.join("segment");
+            return segmentJoin.get("uuid").in(segmentUuids);
+        };
+    }
+
+    /**
+     * Creates specification to search by segment names in the Set.
+     */
+    public static Specification<RatePlanModel> withSegmentNamesContaining(String segmentName) {
         return (root, query, criteriaBuilder) ->
                 ObjectUtils.isEmpty(segmentName) ? criteriaBuilder.conjunction() :
                         criteriaBuilder.like(
-                                criteriaBuilder.lower(root.get("segment").get("name")),
+                                criteriaBuilder.lower(root.join("segment").get("name")),
                                 "%" + segmentName.toLowerCase() + "%"
                         );
     }
 
-    /**
-     * Creates specification to search by sub-segment name.
-     */
-    public static Specification<RatePlanModel> withSubSegmentNameContaining(String subSegmentName) {
-        return (root, query, criteriaBuilder) ->
-                ObjectUtils.isEmpty(subSegmentName) ? criteriaBuilder.conjunction() :
-                        criteriaBuilder.like(
-                                criteriaBuilder.lower(root.get("subSegment").get("name")),
-                                "%" + subSegmentName.toLowerCase() + "%"
-                        );
-    }
 
     /**
      * Creates specification to find rate plans by unit UUID.
