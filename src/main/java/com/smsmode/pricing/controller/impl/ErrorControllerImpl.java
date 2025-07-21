@@ -43,7 +43,8 @@ public class ErrorControllerImpl implements ErrorController {
             AuthenticationUnauthorizedException.class,
             AuthorizationForbiddenException.class,
             TooManyRequestException.class,
-            ResourceNotFoundException.class
+            ResourceNotFoundException.class,
+            ConflictException.class
     })
     public ResponseEntity<ErrorDetailsResource> handleGenericExceptions(
             AbstractBaseException e, HttpServletRequest request) {

@@ -131,7 +131,7 @@ public class RatePlanServiceImpl implements RatePlanService {
         if (!overlappingPlans.isEmpty()) {
             // Trouver quel segment est en conflit
             RatePlanModel conflictingPlan = overlappingPlans.get(0);
-            String conflictingSegment = findConflictingSegment(ratePlanModel, conflictingPlan);
+            String conflictingSegment = findConflictingSegmentName(ratePlanModel, conflictingPlan);
 
             throw new ConflictException(
                     ConflictExceptionTitleEnum.SEGMENT_ALREADY_EXISTS,
@@ -140,16 +140,15 @@ public class RatePlanServiceImpl implements RatePlanService {
         }
     }
 
-    private String findConflictingSegment(RatePlanModel newPlan, RatePlanModel existingPlan) {
-        Set<String> newSegments = newPlan.getSegment().stream()
-                .map(SegmentRefEmbeddable::getUuid)
-                .collect(Collectors.toSet());
-
-        return existingPlan.getSegment().stream()
-                .map(SegmentRefEmbeddable::getUuid)
-                .filter(newSegments::contains)
-                .findFirst()
-                .orElse("unknown segment");
+    private String findConflictingSegmentName(RatePlanModel newPlan, RatePlanModel existingPlan) {
+        for (SegmentRefEmbeddable newSegment : newPlan.getSegment()) {
+            for (SegmentRefEmbeddable existingSegment : existingPlan.getSegment()) {
+                if (newSegment.getUuid().equals(existingSegment.getUuid())) {
+                    return newSegment.getName();
+                }
+            }
+        }
+        return "Unknown segment";
     }
 
 
