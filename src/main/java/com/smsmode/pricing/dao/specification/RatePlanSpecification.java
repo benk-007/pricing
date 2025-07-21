@@ -27,20 +27,6 @@ public class RatePlanSpecification {
     }
 
     /**
-     * Creates specification to search by segment UUIDs in the Set.
-     */
-    public static Specification<RatePlanModel> withSegmentUuids(Set<String> segmentUuids) {
-        return (root, query, criteriaBuilder) -> {
-            if (CollectionUtils.isEmpty(segmentUuids)) {
-                return criteriaBuilder.isEmpty(root.get("segment"));
-            }
-
-            Join<RatePlanModel, SegmentRefEmbeddable> segmentJoin = root.join("segment");
-            return segmentJoin.get("uuid").in(segmentUuids);
-        };
-    }
-
-    /**
      * Finds rate plans that have at least one segment in common with the given segments.
      */
     public static Specification<RatePlanModel> withOverlappingSegments(Set<String> segmentUuids) {

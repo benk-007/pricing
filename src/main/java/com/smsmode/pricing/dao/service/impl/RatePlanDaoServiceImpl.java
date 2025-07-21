@@ -8,7 +8,6 @@ import com.smsmode.pricing.exception.enumeration.ResourceNotFoundExceptionTitleE
 import com.smsmode.pricing.model.RatePlanModel;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
