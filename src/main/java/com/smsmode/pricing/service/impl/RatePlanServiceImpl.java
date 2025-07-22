@@ -116,8 +116,8 @@ public class RatePlanServiceImpl implements RatePlanService {
      * Validates that segments are not already used by other enabled rate plans.
      */
     private void validateSegmentUniqueness(RatePlanModel ratePlanModel, String excludeRatePlanId) {
-        Set<String> segmentUuids = ratePlanModel.getSegment().stream()
-                .map(SegmentRefEmbeddable::getUuid)
+        Set<String> segmentUuids = ratePlanModel.getSegments().stream()
+                .map(SegmentRefEmbeddable::getId)
                 .collect(Collectors.toSet());
 
         List<RatePlanModel> overlappingPlans = ratePlanDaoService
@@ -141,9 +141,9 @@ public class RatePlanServiceImpl implements RatePlanService {
     }
 
     private String findConflictingSegmentName(RatePlanModel newPlan, RatePlanModel existingPlan) {
-        for (SegmentRefEmbeddable newSegment : newPlan.getSegment()) {
-            for (SegmentRefEmbeddable existingSegment : existingPlan.getSegment()) {
-                if (newSegment.getUuid().equals(existingSegment.getUuid())) {
+        for (SegmentRefEmbeddable newSegment : newPlan.getSegments()) {
+            for (SegmentRefEmbeddable existingSegment : existingPlan.getSegments()) {
+                if (newSegment.getId().equals(existingSegment.getId())) {
                     return newSegment.getName();
                 }
             }

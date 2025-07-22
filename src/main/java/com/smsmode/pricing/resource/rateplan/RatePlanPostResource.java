@@ -20,7 +20,7 @@ public class RatePlanPostResource {
     private String name;
 
     @Valid
-    private Set<SegmentRefEmbeddable> segment = new HashSet<>();
+    private Set<SegmentRefEmbeddable> segments = new HashSet<>();
 
     @NotNull(message = "Enabled status is required")
     private Boolean enabled = false;

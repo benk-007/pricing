@@ -15,8 +15,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class SegmentRefEmbeddable {
 
-    @Column(name = "SEGMENT_UUID")
-    private String uuid;
+    @Column(name = "SEGMENT_ID")
+    private String id;
     @Column(name = "SEGMENT_NAME")
     private String name;
 }

@@ -1,7 +1,10 @@
 package com.smsmode.pricing.dao.specification;
 
 import com.smsmode.pricing.embeddable.SegmentRefEmbeddable;
+import com.smsmode.pricing.embeddable.SegmentRefEmbeddable_;
+import com.smsmode.pricing.embeddable.UnitRefEmbeddable_;
 import com.smsmode.pricing.model.RatePlanModel;
+import com.smsmode.pricing.model.RatePlanModel_;
 import jakarta.persistence.criteria.Join;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.CollectionUtils;
@@ -21,7 +24,7 @@ public class RatePlanSpecification {
         return (root, query, criteriaBuilder) ->
                 ObjectUtils.isEmpty(name) ? criteriaBuilder.conjunction() :
                         criteriaBuilder.like(
-                                criteriaBuilder.lower(root.get("name")),
+                                criteriaBuilder.lower(root.get(RatePlanModel_.name)),
                                 "%" + name.toLowerCase() + "%"
                         );
     }
@@ -35,10 +38,10 @@ public class RatePlanSpecification {
                 return criteriaBuilder.disjunction(); // Retourne false (aucun résultat)
             }
 
-            Join<RatePlanModel, SegmentRefEmbeddable> segmentJoin = root.join("segment");
+            Join<RatePlanModel, SegmentRefEmbeddable> segmentJoin = root.join(RatePlanModel_.segments);
             return criteriaBuilder.and(
-                    criteriaBuilder.equal(root.get("enabled"), true),
-                    segmentJoin.get("uuid").in(segmentUuids)
+                    criteriaBuilder.equal(root.get(RatePlanModel_.enabled), true),
+                    segmentJoin.get(SegmentRefEmbeddable_.id).in(segmentUuids)
             );
         };
     }
@@ -50,7 +53,7 @@ public class RatePlanSpecification {
         return (root, query, criteriaBuilder) ->
                 ObjectUtils.isEmpty(segmentName) ? criteriaBuilder.conjunction() :
                         criteriaBuilder.like(
-                                criteriaBuilder.lower(root.join("segment").get("name")),
+                                criteriaBuilder.lower(root.join(RatePlanModel_.segments).get(SegmentRefEmbeddable_.name)),
                                 "%" + segmentName.toLowerCase() + "%"
                         );
     }
@@ -62,6 +65,6 @@ public class RatePlanSpecification {
     public static Specification<RatePlanModel> withUnitUuid(String unitUuid) {
         return (root, query, criteriaBuilder) ->
                 ObjectUtils.isEmpty(unitUuid) ? criteriaBuilder.conjunction() :
-                        criteriaBuilder.equal(root.get("unit").get("uuid"), unitUuid);
+                        criteriaBuilder.equal(root.get(RatePlanModel_.unit).get(UnitRefEmbeddable_.id), unitUuid);
     }
 }

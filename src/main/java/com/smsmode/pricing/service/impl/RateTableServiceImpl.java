@@ -44,7 +44,7 @@ public class RateTableServiceImpl implements RateTableService {
         RateTableModel rateTableModel = rateTableMapper.postResourceToModel(rateTablePostResource);
 
         if (rateTablePostResource.getRatePlan() != null) {
-            String ratePlanUuid = rateTablePostResource.getRatePlan().getUuid();
+            String ratePlanUuid = rateTablePostResource.getRatePlan().getId();
             RatePlanModel ratePlan = rateTableMapper.resolveRatePlan(ratePlanUuid);
             rateTableModel.setRatePlan(ratePlan);
         }

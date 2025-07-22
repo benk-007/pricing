@@ -12,7 +12,7 @@ import java.util.Set;
 @Data
 public class RatePlanPatchResource {
     private String name;
-    private Set<SegmentRefEmbeddable> segment;
+    private Set<SegmentRefEmbeddable> segments;
     private Boolean enabled = false;
     private UnitRefEmbeddable unit;
 }

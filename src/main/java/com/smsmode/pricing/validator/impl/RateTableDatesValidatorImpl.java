@@ -20,7 +20,7 @@ public class RateTableDatesValidatorImpl implements ConstraintValidator<ValidRat
         // Check overlapping logic
         boolean hasOverlap = rateTableRepository.exists(
                 RateTableSpecification.withOverlappingDates(
-                        resource.getRatePlan().getUuid(),
+                        resource.getRatePlan().getId(),
                         resource.getType(),
                         resource.getStartDate(),
                         resource.getEndDate()

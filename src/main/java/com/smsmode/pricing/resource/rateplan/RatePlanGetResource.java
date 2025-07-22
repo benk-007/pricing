@@ -15,7 +15,7 @@ public class RatePlanGetResource {
 
     private String id;
     private String name;
-    private Set<SegmentRefEmbeddable> segment;
+    private Set<SegmentRefEmbeddable> segments;
     private Boolean enabled;
     private UnitRefEmbeddable unit;
     private AuditGetResource audit;

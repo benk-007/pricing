@@ -25,7 +25,7 @@ public class RatePlanModel extends AbstractBaseModel {
     private String name;
 
     @ElementCollection(fetch = FetchType.LAZY)
-    private Set<SegmentRefEmbeddable> segment = new HashSet<>();
+    private Set<SegmentRefEmbeddable> segments = new HashSet<>();
 
     @Column(name = "ENABLED", nullable = false)
     private Boolean enabled = false;

@@ -19,5 +19,5 @@ public class UnitRefEmbeddable {
 
     @NotBlank(message = "Unit UUID is required")
     @Column(name = "UNIT_ID", nullable = false)
-    private String uuid;
+    private String id;
 }
