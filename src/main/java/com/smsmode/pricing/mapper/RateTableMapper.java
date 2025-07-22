@@ -56,8 +56,8 @@ import java.util.List;
     @AfterMapping
     public void afterPatchMapping(RateTablePatchResource patch, @MappingTarget RateTableModel model) {
         // Résolution automatique du RatePlan si fourni
-        if (patch.getRatePlan() != null && patch.getRatePlan().getUuid() != null) {
-            RatePlanModel ratePlan = ratePlanDaoService.findById(patch.getRatePlan().getUuid());
+        if (patch.getRatePlan() != null && patch.getRatePlan().getId() != null) {
+            RatePlanModel ratePlan = ratePlanDaoService.findById(patch.getRatePlan().getId());
             model.setRatePlan(ratePlan);
         }
     }

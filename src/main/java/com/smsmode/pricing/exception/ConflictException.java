@@ -25,6 +25,6 @@ public class ConflictException extends AbstractBaseException {
      *                #getMessage()} method).
      */
     public ConflictException(BaseExceptionEnum title, String message) {
-        super(title, HttpStatus.UNAUTHORIZED, message);
+        super(title, HttpStatus.CONFLICT, message);
     }
 }

@@ -1,6 +1,9 @@
 package com.smsmode.pricing.service.impl;
 
 import com.smsmode.pricing.dao.service.RatePlanDaoService;
+import com.smsmode.pricing.embeddable.SegmentRefEmbeddable;
+import com.smsmode.pricing.exception.ConflictException;
+import com.smsmode.pricing.exception.enumeration.ConflictExceptionTitleEnum;
 import com.smsmode.pricing.mapper.RatePlanMapper;
 import com.smsmode.pricing.model.RatePlanModel;
 import com.smsmode.pricing.resource.rateplan.RatePlanGetResource;
@@ -17,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Implementation of RatePlanService for managing rate plan business operations.
@@ -37,9 +42,9 @@ public class RatePlanServiceImpl implements RatePlanService {
         // Transform POST resource to model
         RatePlanModel ratePlanModel = ratePlanMapper.postResourceToModel(ratePlanPostResource);
 
-        // If new rate plan is enabled, disable competitors
+        // If new rate plan is enabled, validate segment uniqueness
         if (Boolean.TRUE.equals(ratePlanModel.getEnabled())) {
-            disableCompetitors(ratePlanModel);
+            validateSegmentUniqueness(ratePlanModel, null);
         }
 
         // Save to database
@@ -54,11 +59,11 @@ public class RatePlanServiceImpl implements RatePlanService {
 
     @Override
     @Transactional(readOnly = true)
-    public ResponseEntity<Page<RatePlanGetResource>> getAll(String unitId, String search, String segmentName, String subSegmentName, Pageable pageable) {
+    public ResponseEntity<Page<RatePlanGetResource>> getAll(String unitId, String search, String segmentName, Pageable pageable) {
         log.debug("Retrieving all rate plans with pagination");
 
         // Get paginated data from database
-        Page<RatePlanModel> ratePlanModelPage = ratePlanDaoService.findByUnitId(unitId, search, segmentName, subSegmentName, pageable);
+        Page<RatePlanModel> ratePlanModelPage = ratePlanDaoService.findByUnitId(unitId, search, segmentName, pageable);
         log.info("Retrieved {} rate plans from database", ratePlanModelPage.getTotalElements());
 
         // Transform models to GET resources
@@ -92,9 +97,9 @@ public class RatePlanServiceImpl implements RatePlanService {
         // Update model with new data
         ratePlanMapper.updateModelFromPatchResource(ratePlanPatchResource, existingRatePlan);
 
-        // If updated rate plan is enabled, disable competitors
+        // If updated rate plan is enabled, validate segment uniqueness
         if (Boolean.TRUE.equals(existingRatePlan.getEnabled())) {
-            disableCompetitors(existingRatePlan);
+            validateSegmentUniqueness(existingRatePlan, ratePlanId);
         }
 
         // Save updated model
@@ -108,28 +113,44 @@ public class RatePlanServiceImpl implements RatePlanService {
     }
 
     /**
-     * Disables competitor rate plans with same combination.
+     * Validates that segments are not already used by other enabled rate plans.
      */
-    private void disableCompetitors(RatePlanModel ratePlanModel) {
-        log.debug("Disabling competitors for rate plan: {}", ratePlanModel.getName());
+    private void validateSegmentUniqueness(RatePlanModel ratePlanModel, String excludeRatePlanId) {
+        Set<String> segmentUuids = ratePlanModel.getSegments().stream()
+                .map(SegmentRefEmbeddable::getId)
+                .collect(Collectors.toSet());
 
-        // Extract combination values
-        String segmentUuid = ratePlanModel.getSegment() != null ? ratePlanModel.getSegment().getUuid() : null;
-        String subSegmentUuid = ratePlanModel.getSubSegment() != null ? ratePlanModel.getSubSegment().getUuid() : null;
+        List<RatePlanModel> overlappingPlans = ratePlanDaoService
+                .findEnabledRatePlansWithOverlappingSegments(segmentUuids);
 
-        // Find competitors with same combination
-        List<RatePlanModel> competitors = ratePlanDaoService.findEnabledRatePlansWithSameCombination(segmentUuid, subSegmentUuid);
+        // Exclure le rate plan actuel (pour les updates)
+        if (excludeRatePlanId != null) {
+            overlappingPlans.removeIf(plan -> plan.getId().equals(excludeRatePlanId));
+        }
 
-        // Remove current rate plan from competitors (for UPDATE case)
-        competitors.removeIf(competitor -> competitor.getId().equals(ratePlanModel.getId()));
+        if (!overlappingPlans.isEmpty()) {
+            // Trouver quel segment est en conflit
+            RatePlanModel conflictingPlan = overlappingPlans.get(0);
+            String conflictingSegment = findConflictingSegmentName(ratePlanModel, conflictingPlan);
 
-        if (!competitors.isEmpty()) {
-            log.info("Found {} competitors to disable", competitors.size());
-            ratePlanDaoService.disableRatePlans(competitors);
-        } else {
-            log.debug("No competitors found");
+            throw new ConflictException(
+                    ConflictExceptionTitleEnum.SEGMENT_ALREADY_EXISTS,
+                    String.format("%s already exists in %s", conflictingSegment, conflictingPlan.getName())
+            );
         }
     }
+
+    private String findConflictingSegmentName(RatePlanModel newPlan, RatePlanModel existingPlan) {
+        for (SegmentRefEmbeddable newSegment : newPlan.getSegments()) {
+            for (SegmentRefEmbeddable existingSegment : existingPlan.getSegments()) {
+                if (newSegment.getId().equals(existingSegment.getId())) {
+                    return newSegment.getName();
+                }
+            }
+        }
+        return "Unknown segment";
+    }
+
 
     @Override
     public ResponseEntity<Void> delete(String ratePlanId) {

@@ -13,6 +13,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RatePlanRefEmbeddable {
     @NotBlank(message = "Rate plan UUID is required")
-    @Column(name = "RATE_PLAN_UUID", nullable = false)
-    private String uuid;
+    @Column(name = "RATE_PLAN_ID", nullable = false)
+    private String id;
 }

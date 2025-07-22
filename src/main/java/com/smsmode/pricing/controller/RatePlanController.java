@@ -26,8 +26,7 @@ public interface RatePlanController {
      */
     @GetMapping
     ResponseEntity<Page<RatePlanGetResource>> getAll(@RequestParam String unitId, @RequestParam(value = "search", required = false) String search,
-                                                     @RequestParam(value = "segmentName", required = false) String segmentName,
-                                                     @RequestParam(value= "subSegmentName", required = false) String subSegmentName, Pageable pageable);
+                                                     @RequestParam(value = "segmentName", required = false) String segmentName, Pageable pageable);
 
     /**
      * Retrieves a rate plan by its ID.

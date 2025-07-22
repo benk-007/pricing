@@ -66,7 +66,7 @@ public class DefaultRateServiceImpl implements DefaultRateService {
         log.debug("Saving default rate to database ...");
         defaultRateModel = defaultRateDaoService.save(defaultRateModel);
         log.info("Successfully saved default rate for unit: {}, additionalGuestFees count: {}, daySpecificRates count: {}",
-                defaultRateModel.getUnit().getUuid(),
+                defaultRateModel.getUnit().getId(),
                 defaultRateModel.getAdditionalGuestFees().size(),
                 defaultRateModel.getDaySpecificRates().size());
         log.debug("Mapping default rate model to get resource ...");

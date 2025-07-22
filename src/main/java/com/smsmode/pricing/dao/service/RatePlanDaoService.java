@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * DAO Service interface for RatePlan data access operations.
@@ -17,9 +18,9 @@ public interface RatePlanDaoService {
     RatePlanModel save(RatePlanModel ratePlanModel);
 
     /**
-     * Finds rate plans with same combination and enabled=true.
+     * Finds rate plans that have at least one segment in common with the given segments.
      */
-    List<RatePlanModel> findEnabledRatePlansWithSameCombination(String segmentUuid, String subSegmentUuid);
+    List<RatePlanModel> findEnabledRatePlansWithOverlappingSegments(Set<String> segmentUuids);
 
     /**
      * Disables multiple rate plans by setting enabled=false.
@@ -29,7 +30,7 @@ public interface RatePlanDaoService {
     /**
      * Finds all rate plans related to a unit with pagination.
      */
-    Page<RatePlanModel> findByUnitId(String unitId, String search, String segmentName, String subSegmentName, Pageable pageable);
+    Page<RatePlanModel> findByUnitId(String unitId, String search, String segmentName, Pageable pageable);
 
     /**
      * Finds a rate plan by its ID.

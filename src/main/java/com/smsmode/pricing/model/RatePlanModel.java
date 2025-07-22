@@ -1,7 +1,6 @@
 package com.smsmode.pricing.model;
 
 import com.smsmode.pricing.embeddable.SegmentRefEmbeddable;
-import com.smsmode.pricing.embeddable.SubSegmentRefEmbeddable;
 import com.smsmode.pricing.embeddable.UnitRefEmbeddable;
 import com.smsmode.pricing.model.base.AbstractBaseModel;
 import jakarta.persistence.*;
@@ -9,7 +8,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Entity representing a rate plan in the pricing system.
@@ -23,11 +24,8 @@ public class RatePlanModel extends AbstractBaseModel {
     @Column(name = "NAME", nullable = false)
     private String name;
 
-    @Embedded
-    private SegmentRefEmbeddable segment;
-
-    @Embedded
-    private SubSegmentRefEmbeddable subSegment;
+    @ElementCollection(fetch = FetchType.LAZY)
+    private Set<SegmentRefEmbeddable> segments = new HashSet<>();
 
     @Column(name = "ENABLED", nullable = false)
     private Boolean enabled = false;
