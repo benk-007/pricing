@@ -16,6 +16,6 @@ public class DefaultRateSpecification {
     public static Specification<DefaultRateModel> withUnitId(String unitId) {
         return (root, query, criteriaBuilder) ->
                 ObjectUtils.isEmpty(unitId) ? criteriaBuilder.conjunction() :
-                        criteriaBuilder.equal(root.get("unit").get("uuid"), unitId);
+                        criteriaBuilder.equal(root.get("unit").get("id"), unitId);
     }
 }
