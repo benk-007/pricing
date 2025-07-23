@@ -11,4 +11,6 @@ public class UnitPricingGetResource {
     private List<NightRateGetResource> nightRates;
     private BigDecimal nightlyRate; // average rate
     private BigDecimal totalAmount;
+    private Integer minStay;
+    private Integer maxStay;
 }

@@ -95,10 +95,19 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
         log.debug("Calculating pricing for unit: {}, dates: {} to {}", unitId, checkinDate, checkoutDate);
 
         List<NightRateGetResource> nightRates = null;
+        RatePlanModel foundRatePlan = null;
 
         // Try rate plan if segment provided
         if (StringUtils.hasText(segmentId)) {
             nightRates = tryCalculateFromRatePlan(unitId, segmentId, checkinDate, checkoutDate, guests);
+            if (nightRates != null) {
+                Set<String> segmentUuids = Set.of(segmentId);
+                List<RatePlanModel> ratePlans = ratePlanDaoService.findEnabledRatePlansWithOverlappingSegments(segmentUuids);
+                foundRatePlan = ratePlans.stream()
+                        .filter(rp -> unitId.equals(rp.getUnit().getId()))
+                        .findFirst()
+                        .orElse(null);
+            }
         }
 
         // Fallback to default rate
@@ -114,11 +123,44 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
         BigDecimal totalAmount = calculateTotalAmount(nightRates);
         BigDecimal averageRate = calculateAverageRate(nightRates);
 
+        Integer minStay = null;
+        Integer maxStay = null;
+
+        if (foundRatePlan != null) {
+            // Cas rate plan - vérifier quel source a été utilisé pour check-in date
+            RateTableModel checkinRateTable = rateTableDaoService.findRateTableForDate(foundRatePlan.getId(), checkinDate);
+
+            if (checkinRateTable != null) {
+                // Rate table utilisé pour check-in date
+                minStay = checkinRateTable.getMinStay();
+                maxStay = checkinRateTable.getMaxStay();
+                log.debug("Using rate table minStay/maxStay for check-in date: {}/{}", minStay, maxStay);
+            } else {
+                // Default rate utilisé pour check-in date
+                DefaultRateModel defaultRate = defaultRateDaoService.findWithRelatedDataForPricing(unitId);
+                if (defaultRate != null) {
+                    minStay = defaultRate.getMinStay();
+                    maxStay = defaultRate.getMaxStay();
+                    log.debug("Using default rate minStay/maxStay for check-in date: {}/{}", minStay, maxStay);
+                }
+            }
+        } else {
+            // Cas default rate seulement
+            DefaultRateModel defaultRate = defaultRateDaoService.findWithRelatedDataForPricing(unitId);
+            if (defaultRate != null) {
+                minStay = defaultRate.getMinStay();
+                maxStay = defaultRate.getMaxStay();
+                log.debug("Using default rate minStay/maxStay: {}/{}", minStay, maxStay);
+            }
+        }
+
         UnitPricingGetResource unitPricing = new UnitPricingGetResource();
         unitPricing.setId(unitId);
         unitPricing.setNightRates(nightRates);
         unitPricing.setNightlyRate(averageRate);
         unitPricing.setTotalAmount(totalAmount);
+        unitPricing.setMinStay(minStay);
+        unitPricing.setMaxStay(maxStay);
 
         log.info("Successfully calculated pricing for unit: {} - Total: {}, Average: {}",
                 unitId, totalAmount, averageRate);
@@ -298,7 +340,7 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
             return BigDecimal.ZERO;
         }
 
-        int totalAdults = guests.getAdults();
+        int totalAdults = guests.getAdults() != null ? guests.getAdults() : 0;
         int totalChildren = getTotalChildren(guests.getChildren());
 
         log.debug("Guest analysis: {} adults, {} children", totalAdults, totalChildren);
@@ -322,6 +364,7 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
             log.debug("Only children: 1 child gets base rate, {} additional children", additionalChildren);
         } else {
             // No guests (shouldn't happen)
+            log.warn("No guests found in request");
             return BigDecimal.ZERO;
         }
 
@@ -484,6 +527,8 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
         emptyPricing.setNightRates(new ArrayList<>());
         emptyPricing.setNightlyRate(BigDecimal.ZERO);
         emptyPricing.setTotalAmount(BigDecimal.ZERO);
+        emptyPricing.setMinStay(null);
+        emptyPricing.setMaxStay(null);
         return emptyPricing;
     }
 }
