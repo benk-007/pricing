@@ -2,7 +2,6 @@ package com.smsmode.pricing.controller.impl;
 
 import com.smsmode.pricing.controller.PricingCalculationController;
 import com.smsmode.pricing.resource.common.UnitPricingGetResource;
-import com.smsmode.pricing.resource.pricecalculation.PriceCalculationGetResource;
 import com.smsmode.pricing.resource.pricecalculation.PriceCalculationPostResource;
 import com.smsmode.pricing.service.PricingCalculationService;
 import lombok.RequiredArgsConstructor;

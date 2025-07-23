@@ -1,7 +1,6 @@
 package com.smsmode.pricing.service;
 
 import com.smsmode.pricing.resource.common.UnitPricingGetResource;
-import com.smsmode.pricing.resource.pricecalculation.PriceCalculationGetResource;
 import com.smsmode.pricing.resource.pricecalculation.PriceCalculationPostResource;
 import org.springframework.http.ResponseEntity;
 

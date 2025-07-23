@@ -6,6 +6,6 @@ import java.math.BigDecimal;
 
 @Data
 public class NightRateGetResource {
-    private String date; // Format "DD-MM-YYYY"
+    private String date;
     private BigDecimal rate;
 }

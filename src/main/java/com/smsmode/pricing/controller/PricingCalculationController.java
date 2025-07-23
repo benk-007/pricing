@@ -1,7 +1,6 @@
 package com.smsmode.pricing.controller;
 
 import com.smsmode.pricing.resource.common.UnitPricingGetResource;
-import com.smsmode.pricing.resource.pricecalculation.PriceCalculationGetResource;
 import com.smsmode.pricing.resource.pricecalculation.PriceCalculationPostResource;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;

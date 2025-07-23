@@ -22,6 +22,8 @@ public class PriceCalculationPostResource {
 
     private String segmentId; // Optional
 
+    private String subSegmentId; //Optional
+
     @NotEmpty(message = "At least one unit is required")
     private List<String> units;
 }

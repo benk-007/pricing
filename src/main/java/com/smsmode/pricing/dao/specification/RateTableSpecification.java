@@ -126,23 +126,6 @@ public class RateTableSpecification {
     }
 
     /**
-     * Creates specification to find rate tables that are active (not expired).
-     * Used for filtering out past rate tables.
-     *
-     * @param referenceDate The reference date (usually today)
-     * @return Specification for active rate tables
-     */
-    public static Specification<RateTableModel> withActiveRateTables(LocalDate referenceDate) {
-        return (root, query, criteriaBuilder) -> {
-            if (referenceDate == null) {
-                return criteriaBuilder.conjunction();
-            }
-
-            return criteriaBuilder.greaterThanOrEqualTo(root.get(RateTableModel_.endDate), referenceDate);
-        };
-    }
-
-    /**
      * Creates specification to find rate tables by type for pricing calculations.
      * Currently focuses on STANDARD type, DYNAMIC will be implemented later.
      *
