@@ -3,7 +3,6 @@ package com.smsmode.pricing.service.impl;
 import com.smsmode.pricing.dao.service.DefaultRateDaoService;
 import com.smsmode.pricing.dao.service.RatePlanDaoService;
 import com.smsmode.pricing.dao.service.RateTableDaoService;
-import com.smsmode.pricing.embeddable.AgeBucketEmbeddable;
 import com.smsmode.pricing.enumeration.AmountTypeEnum;
 import com.smsmode.pricing.enumeration.GuestTypeEnum;
 import com.smsmode.pricing.model.*;
@@ -23,6 +22,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.net.URI;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -33,11 +33,11 @@ import java.util.stream.Collectors;
 /**
  * Implementation of PricingCalculationService for calculating unit pricing based on dates, guests, and segments.
  *
- * Simplified Business Logic Flow:
+ * Business Logic Flow:
  * 1. Parse dates from request
  * 2. For each unit, find pricing rules (rate plan with segment → default rate → empty)
- * 3. Calculate daily base rates (nightly rates + day-specific rates + rate table overrides)
- * 4. Apply additional guest fees (adults and children based on age buckets)
+ * 3. Calculate daily base rates using MAX logic between all sources
+ * 4. Apply additional guest fees using MAX logic with final nightly rate for percentages
  * 5. Calculate summary statistics (total amount and average rate)
  */
 @Slf4j
@@ -50,142 +50,72 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
     private final RatePlanDaoService ratePlanDaoService;
     private final RateTableDaoService rateTableDaoService;
 
-    /**
-     * Main method that orchestrates the entire pricing calculation process for multiple units
-     * <p>
-     * Process Flow:
-     * 1. Parse date strings to LocalDate objects for date calculations
-     * 2. Calculate pricing for each unit individually (allows partial success)
-     * 3. Build and return the complete response with all unit pricing
-     *
-     * @param request The pricing calculation request containing dates, guests, segment, and units
-     * @return ResponseEntity with complete pricing breakdown for all units
-     */
     @Override
-    public ResponseEntity<PriceCalculationGetResource> calculatePricing(PriceCalculationPostResource request) {
+    public ResponseEntity<List<UnitPricingGetResource>> calculatePricing(PriceCalculationPostResource request) {
         log.debug("Starting price calculation for {} units", request.getUnits().size());
 
-        // Step 1: Parse string dates to LocalDate objects for date calculations
-        // Convert "DD-MM-YYYY" format to LocalDate for easier manipulation
         LocalDate checkinDate = parseDateFromString(request.getCheckinDate());
         LocalDate checkoutDate = parseDateFromString(request.getCheckoutDate());
 
-        // Step 2: Calculate pricing for each requested unit individually
-        // Each unit may have different pricing rules (default rates, rate plans)
         List<UnitPricingGetResource> unitPricings = new ArrayList<>();
 
         for (String unitId : request.getUnits()) {
             try {
-                // Calculate daily rates, apply guest fees, and compute totals for this unit
                 UnitPricingGetResource unitPricing = calculatePricingForUnit(
                         unitId, checkinDate, checkoutDate, request.getGuests(), request.getSegmentId());
                 unitPricings.add(unitPricing);
             } catch (Exception e) {
                 log.warn("Failed to calculate pricing for unit {}: {}", unitId, e.getMessage());
-                // Add empty result for failed units instead of failing entire request
                 unitPricings.add(createEmptyUnitPricing(unitId));
             }
         }
 
-        // Step 3: Build the final response containing all unit pricing information
-        // Wrap individual unit results in the standard response format
         PriceCalculationGetResource response = new PriceCalculationGetResource();
         response.setUnits(unitPricings);
 
         log.info("Successfully calculated pricing for {} units", unitPricings.size());
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.created(URI.create("")).body(unitPricings);
     }
 
-    /**
-     * Parses a date string in DD-MM-YYYY format to LocalDate object
-     *
-     * @param dateString The date string to parse (format: "DD-MM-YYYY")
-     * @return LocalDate object representing the parsed date
-     * @throws DateTimeParseException if the date format is invalid
-     */
     private LocalDate parseDateFromString(String dateString) {
-        log.debug("Parsing date string: {}", dateString);
-
         try {
-            // Define the expected date format pattern and parse
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-            LocalDate parsedDate = LocalDate.parse(dateString, formatter);
-
-            log.debug("Successfully parsed date: {} -> {}", dateString, parsedDate);
-            return parsedDate;
-
+            return LocalDate.parse(dateString, formatter);
         } catch (DateTimeParseException e) {
             log.error("Failed to parse date string '{}': {}", dateString, e.getMessage());
             throw new DateTimeParseException(
                     "Invalid date format. Expected DD-MM-YYYY, got: " + dateString,
-                    dateString,
-                    e.getErrorIndex()
-            );
+                    dateString, e.getErrorIndex());
         }
     }
 
-    /**
-     * Converts LocalDate back to string in DD-MM-YYYY format for response
-     *
-     * @param date The LocalDate to convert
-     * @return String representation in DD-MM-YYYY format
-     */
     private String formatDateToString(LocalDate date) {
-        log.debug("Formatting date to string: {}", date);
-
-        // Use the same formatter for consistency with request format
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
-        String formattedDate = date.format(formatter);
-
-        log.debug("Formatted date: {} -> {}", date, formattedDate);
-        return formattedDate;
+        return date.format(formatter);
     }
 
-    /**
-     * Calculates pricing for a single unit based on stay dates, guests, and segment
-     * <p>
-     * Calculation Flow:
-     * 1. Find applicable pricing rules (rate plan with segment → default rate → empty)
-     * 2. Calculate base daily rates for each night
-     * 3. Apply additional guest fees based on guest count and age buckets
-     * 4. Calculate summary statistics (total amount and average rate)
-     *
-     * @param unitId       The unit ID to calculate pricing for
-     * @param checkinDate  The check-in date
-     * @param checkoutDate The check-out date
-     * @param guests       The guests information (adults and children)
-     * @param segmentId    The segment ID (optional)
-     * @return UnitPricingGetResource with calculated pricing or empty if no pricing rules found
-     */
     private UnitPricingGetResource calculatePricingForUnit(String unitId, LocalDate checkinDate,
                                                            LocalDate checkoutDate, GuestsResource guests,
                                                            String segmentId) {
         log.debug("Calculating pricing for unit: {}, dates: {} to {}", unitId, checkinDate, checkoutDate);
 
-        // Try rate plan first if segment provided
         List<NightRateGetResource> nightRates = null;
         if (StringUtils.hasText(segmentId)) {
             nightRates = tryCalculateFromRatePlan(unitId, segmentId, checkinDate, checkoutDate, guests);
         }
 
-        // Fallback to default rate if no rate plan result
         if (nightRates == null) {
             nightRates = tryCalculateFromDefaultRate(unitId, checkinDate, checkoutDate, guests);
         }
 
-        // If still no result, return empty
         if (nightRates == null) {
             log.warn("No pricing rules found for unit: {}", unitId);
             return createEmptyUnitPricing(unitId);
         }
 
-        // Calculate summary statistics (average rate and total amount)
-        // Compute the overall pricing metrics for the entire stay
         BigDecimal totalAmount = calculateTotalAmount(nightRates);
         BigDecimal averageRate = calculateAverageRate(nightRates);
 
-        // Build the final response for this unit
         UnitPricingGetResource unitPricing = new UnitPricingGetResource();
         unitPricing.setId(unitId);
         unitPricing.setNightRates(nightRates);
@@ -194,20 +124,13 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
 
         log.info("Successfully calculated pricing for unit: {} - Total: {}, Average: {}",
                 unitId, totalAmount, averageRate);
-
         return unitPricing;
     }
 
-    /**
-     * Tries to calculate pricing using rate plan for the given segment
-     *
-     * @return List of night rates or null if no applicable rate plan found
-     */
     private List<NightRateGetResource> tryCalculateFromRatePlan(String unitId, String segmentId,
                                                                 LocalDate checkinDate, LocalDate checkoutDate,
                                                                 GuestsResource guests) {
         try {
-            // Find active rate plan with segment for this unit
             Set<String> segmentUuids = Set.of(segmentId);
             List<RatePlanModel> ratePlans = ratePlanDaoService.findEnabledRatePlansWithOverlappingSegments(segmentUuids);
 
@@ -216,19 +139,14 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
                     .findFirst();
 
             if (applicableRatePlan.isEmpty()) {
+                log.debug("No applicable rate plan found for unit: {} with segment: {}", unitId, segmentId);
                 return null;
             }
 
             RatePlanModel ratePlan = applicableRatePlan.get();
-            List<RateTableModel> rateTables = rateTableDaoService.findCoveringRateTables(
-                    ratePlan.getId(), checkinDate, checkoutDate);
+            log.debug("Found applicable rate plan: {} for unit: {}", ratePlan.getName(), unitId);
 
-            // Calculate rates and apply fees
-            List<NightRateGetResource> nightRates = calculateDailyRatesFromRatePlan(
-                    checkinDate, checkoutDate, ratePlan, rateTables);
-            applyAdditionalGuestFeesFromRatePlan(nightRates, guests, ratePlan, rateTables);
-
-            return nightRates;
+            return calculateDailyRatesFromRatePlan(checkinDate, checkoutDate, ratePlan, guests);
 
         } catch (Exception e) {
             log.error("Error calculating from rate plan for unit: {}, segment: {}", unitId, segmentId, e);
@@ -236,25 +154,17 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
         }
     }
 
-    /**
-     * Tries to calculate pricing using default rate
-     *
-     * @return List of night rates or null if no default rate found
-     */
     private List<NightRateGetResource> tryCalculateFromDefaultRate(String unitId, LocalDate checkinDate,
                                                                    LocalDate checkoutDate, GuestsResource guests) {
         try {
             DefaultRateModel defaultRate = defaultRateDaoService.findWithRelatedDataForPricing(unitId);
             if (defaultRate == null) {
+                log.debug("No default rate found for unit: {}", unitId);
                 return null;
             }
 
-            // Calculate rates and apply fees
-            List<NightRateGetResource> nightRates = calculateDailyRatesFromDefaultRate(
-                    checkinDate, checkoutDate, defaultRate);
-            applyAdditionalGuestFeesFromDefaultRate(nightRates, guests, defaultRate);
-
-            return nightRates;
+            log.debug("Found default rate for unit: {}", unitId);
+            return calculateDailyRatesFromDefaultRate(checkinDate, checkoutDate, defaultRate, guests);
 
         } catch (Exception e) {
             log.error("Error calculating from default rate for unit: {}", unitId, e);
@@ -263,44 +173,30 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
     }
 
     /**
-     * Calculates daily rates using rate plan and rate tables
+     * Calculates daily rates using rate plan with MAX logic and applies all fees
      */
     private List<NightRateGetResource> calculateDailyRatesFromRatePlan(LocalDate checkinDate, LocalDate checkoutDate,
-                                                                       RatePlanModel ratePlan, List<RateTableModel> rateTables) {
+                                                                       RatePlanModel ratePlan, GuestsResource guests) {
         List<NightRateGetResource> nightRates = new ArrayList<>();
         LocalDate currentDate = checkinDate;
 
-        while (currentDate.isBefore(checkoutDate)) {
-            // Find rate table covering this date
-            RateTableModel coveringTable = rateTableDaoService.findRateTableForDate(ratePlan.getId(), currentDate);
-            BigDecimal nightlyRate;
+        DefaultRateModel defaultRate = defaultRateDaoService.findWithRelatedDataForPricing(ratePlan.getUnit().getId());
 
-            if (coveringTable != null) {
-                // Use rate table rate, check for day-specific overrides
-                nightlyRate = coveringTable.getNightly();
-                BigDecimal daySpecificRate = findDaySpecificRateInTable(currentDate.getDayOfWeek(), coveringTable);
-                if (daySpecificRate != null) {
-                    nightlyRate = daySpecificRate;
-                }
-            } else {
-                // Fallback to default rate for this unit
-                DefaultRateModel fallbackRate = defaultRateDaoService.findWithRelatedDataForPricing(ratePlan.getUnit().getId());
-                if (fallbackRate != null) {
-                    nightlyRate = fallbackRate.getNightly();
-                    BigDecimal daySpecificRate = findDaySpecificRateInDefault(currentDate.getDayOfWeek(), fallbackRate);
-                    if (daySpecificRate != null) {
-                        nightlyRate = daySpecificRate;
-                    }
-                } else {
-                    nightlyRate = BigDecimal.ZERO;
-                }
-            }
+        while (currentDate.isBefore(checkoutDate)) {
+            RateTableModel coveringTable = rateTableDaoService.findRateTableForDate(ratePlan.getId(), currentDate);
+
+            // Calculate MAX nightly rate from all sources
+            BigDecimal nightlyRate = calculateMaxNightlyRate(currentDate, coveringTable, defaultRate);
+
+            // Calculate and apply all fees using the final nightly rate
+            BigDecimal finalRate = applyAllFees(nightlyRate, guests, coveringTable, defaultRate);
 
             NightRateGetResource nightRate = new NightRateGetResource();
             nightRate.setDate(formatDateToString(currentDate));
-            nightRate.setRate(nightlyRate);
+            nightRate.setRate(finalRate);
             nightRates.add(nightRate);
 
+            log.debug("Calculated final rate for {}: {} (base: {})", currentDate, finalRate, nightlyRate);
             currentDate = currentDate.plusDays(1);
         }
 
@@ -308,10 +204,10 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
     }
 
     /**
-     * Calculates daily rates using default rate
+     * Calculates daily rates using default rate only and applies fees
      */
     private List<NightRateGetResource> calculateDailyRatesFromDefaultRate(LocalDate checkinDate, LocalDate checkoutDate,
-                                                                          DefaultRateModel defaultRate) {
+                                                                          DefaultRateModel defaultRate, GuestsResource guests) {
         List<NightRateGetResource> nightRates = new ArrayList<>();
         LocalDate currentDate = checkinDate;
 
@@ -324,9 +220,12 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
                 nightlyRate = daySpecificRate;
             }
 
+            // Apply fees using default rate only
+            BigDecimal finalRate = applyFeesFromSingleSource(nightlyRate, guests, defaultRate.getAdditionalGuestFees());
+
             NightRateGetResource nightRate = new NightRateGetResource();
             nightRate.setDate(formatDateToString(currentDate));
-            nightRate.setRate(nightlyRate);
+            nightRate.setRate(finalRate);
             nightRates.add(nightRate);
 
             currentDate = currentDate.plusDays(1);
@@ -336,81 +235,385 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
     }
 
     /**
-     * Applies additional guest fees from rate plan (different fees per date based on coverage)
+     * Calculates MAX nightly rate from all available sources
      */
-    private void applyAdditionalGuestFeesFromRatePlan(List<NightRateGetResource> nightRates, GuestsResource guests,
-                                                      RatePlanModel ratePlan, List<RateTableModel> rateTables) {
+    private BigDecimal calculateMaxNightlyRate(LocalDate date, RateTableModel rateTable, DefaultRateModel defaultRate) {
+        List<BigDecimal> allRates = new ArrayList<>();
 
-        // Get default rate fees as fallback
-        DefaultRateModel defaultRate = defaultRateDaoService.findWithRelatedDataForPricing(ratePlan.getUnit().getId());
-        List<AdditionalGuestFeeModel> defaultFees = (defaultRate != null) ? defaultRate.getAdditionalGuestFees() : new ArrayList<>();
-
-        // Apply fees to each night individually based on date coverage
-        for (NightRateGetResource nightRate : nightRates) {
-            LocalDate nightDate = parseDateFromString(nightRate.getDate());
-
-            // Find which rate table covers this specific date
-            RateTableModel coveringTable = rateTableDaoService.findRateTableForDate(ratePlan.getId(), nightDate);
-
-            List<AdditionalGuestFeeModel> feesToApply;
-            if (coveringTable != null && !CollectionUtils.isEmpty(coveringTable.getAdditionalGuestFees())) {
-                // Use rate table fees for covered dates
-                feesToApply = coveringTable.getAdditionalGuestFees();
-            } else {
-                // Use default rate fees for non-covered dates
-                feesToApply = defaultFees;
+        // Rate table rates
+        if (rateTable != null) {
+            if (rateTable.getNightly() != null) {
+                allRates.add(rateTable.getNightly());
             }
-
-            // Apply fees to this specific night
-            applyFeesToSingleNight(nightRate, guests, feesToApply);
+            BigDecimal rateTableDaySpecific = findDaySpecificRateInTable(date.getDayOfWeek(), rateTable);
+            if (rateTableDaySpecific != null) {
+                allRates.add(rateTableDaySpecific);
+            }
         }
+
+        // Default rate rates
+        if (defaultRate != null) {
+            if (defaultRate.getNightly() != null) {
+                allRates.add(defaultRate.getNightly());
+            }
+            BigDecimal defaultDaySpecific = findDaySpecificRateInDefault(date.getDayOfWeek(), defaultRate);
+            if (defaultDaySpecific != null) {
+                allRates.add(defaultDaySpecific);
+            }
+        }
+
+        BigDecimal maxRate = allRates.stream()
+                .max(BigDecimal::compareTo)
+                .orElse(BigDecimal.ZERO);
+
+        log.debug("MAX nightly rate for {}: {} (from {} sources)", date, maxRate, allRates.size());
+        return maxRate;
     }
 
     /**
-     * Applies additional guest fees to a single night rate
+     * Applies all fees (adult + child) using MAX logic with final nightly rate for percentages
      */
-    private void applyFeesToSingleNight(NightRateGetResource nightRate, GuestsResource guests,
-                                        List<AdditionalGuestFeeModel> additionalFees) {
+    private BigDecimal applyAllFees(BigDecimal baseNightlyRate, GuestsResource guests,
+                                    RateTableModel rateTable, DefaultRateModel defaultRate) {
+
+        // Calculate MAX adult fees (unchanged)
+        BigDecimal rateTableAdultFees = calculateAdultFees(guests.getAdults(),
+                rateTable != null ? rateTable.getAdditionalGuestFees() : null);
+        BigDecimal defaultAdultFees = calculateAdultFees(guests.getAdults(),
+                defaultRate != null ? defaultRate.getAdditionalGuestFees() : null);
+        BigDecimal maxAdultFees = rateTableAdultFees.max(defaultAdultFees);
+
+        // Calculate child fees by combining all buckets from both sources
+        List<AdditionalGuestFeeModel> allChildFees = new ArrayList<>();
+
+        if (rateTable != null && !CollectionUtils.isEmpty(rateTable.getAdditionalGuestFees())) {
+            allChildFees.addAll(rateTable.getAdditionalGuestFees().stream()
+                    .filter(fee -> GuestTypeEnum.CHILD.equals(fee.getGuestType()))
+                    .collect(Collectors.toList()));
+        }
+
+        if (defaultRate != null && !CollectionUtils.isEmpty(defaultRate.getAdditionalGuestFees())) {
+            allChildFees.addAll(defaultRate.getAdditionalGuestFees().stream()
+                    .filter(fee -> GuestTypeEnum.CHILD.equals(fee.getGuestType()))
+                    .collect(Collectors.toList()));
+        }
+
+        // Calculate child fees using all available buckets and final nightly rate
+        BigDecimal totalChildFees = calculateChildFees(guests.getChildren(), allChildFees, baseNightlyRate);
+
+        BigDecimal finalRate = baseNightlyRate.add(maxAdultFees).add(totalChildFees);
+
+        log.debug("Applied fees: {} + {} (adult) + {} (child) = {}",
+                baseNightlyRate, maxAdultFees, totalChildFees, finalRate);
+
+        return finalRate;
+    }
+
+    /**
+     * Applies fees from a single source (for default rate only scenario)
+     */
+    private BigDecimal applyFeesFromSingleSource(BigDecimal baseNightlyRate, GuestsResource guests,
+                                                 List<AdditionalGuestFeeModel> additionalFees) {
+        BigDecimal adultFees = calculateAdultFees(guests.getAdults(), additionalFees);
+        BigDecimal childFees = calculateChildFees(guests.getChildren(), additionalFees, baseNightlyRate);
+
+        return baseNightlyRate.add(adultFees).add(childFees);
+    }
+
+    /**
+     * Calculates adult fees from a single source
+     */
+    private BigDecimal calculateAdultFees(int adultCount, List<AdditionalGuestFeeModel> additionalFees) {
         if (CollectionUtils.isEmpty(additionalFees)) {
-            return;
+            return BigDecimal.ZERO;
         }
 
-        BigDecimal baseRate = nightRate.getRate();
+        Optional<AdditionalGuestFeeModel> adultFee = additionalFees.stream()
+                .filter(fee -> GuestTypeEnum.ADULT.equals(fee.getGuestType()))
+                .findFirst();
 
-        // Calculate fee amounts
-        BigDecimal adultFeeAmount = calculateAdultFees(guests.getAdults(), additionalFees);
-        Map<String, BigDecimal> childFeeAmounts = calculateChildFees(guests.getChildren(), additionalFees);
-
-        // Apply adult fees
-        BigDecimal totalAdultFee = calculateFinalFeeAmount(baseRate, adultFeeAmount, additionalFees, GuestTypeEnum.ADULT);
-
-        // Apply child fees
-        BigDecimal totalChildFee = BigDecimal.ZERO;
-        for (Map.Entry<String, BigDecimal> childEntry : childFeeAmounts.entrySet()) {
-            BigDecimal childFeeForBucket = calculateFinalFeeAmount(baseRate, childEntry.getValue(), additionalFees, GuestTypeEnum.CHILD);
-            totalChildFee = totalChildFee.add(childFeeForBucket);
+        if (adultFee.isEmpty()) {
+            return BigDecimal.ZERO;
         }
 
-        // Update the night rate
-        BigDecimal finalRate = baseRate.add(totalAdultFee).add(totalChildFee);
-        nightRate.setRate(finalRate);
+        AdditionalGuestFeeModel fee = adultFee.get();
+        int extraAdults = Math.max(0, adultCount - fee.getGuestCount());
 
-        log.debug("Applied fees to {}: {} + {} (adult) + {} (child) = {}",
-                nightRate.getDate(), baseRate, totalAdultFee, totalChildFee, finalRate);
+        return extraAdults == 0 ? BigDecimal.ZERO :
+                fee.getValue().multiply(BigDecimal.valueOf(extraAdults));
     }
 
     /**
-     * Applies additional guest fees from default rate
+     * Calculates child fees from a single source using final nightly rate for percentages
      */
-    private void applyAdditionalGuestFeesFromDefaultRate(List<NightRateGetResource> nightRates, GuestsResource guests,
-                                                         DefaultRateModel defaultRate) {
-        applyFeesToNightRates(nightRates, guests, defaultRate.getAdditionalGuestFees());
+    private BigDecimal calculateChildFees(List<ChildResource> children,
+                                          List<AdditionalGuestFeeModel> additionalFees,
+                                          BigDecimal finalNightlyRate) {
+        if (CollectionUtils.isEmpty(children) || CollectionUtils.isEmpty(additionalFees)) {
+            return BigDecimal.ZERO;
+        }
+
+        // Get all available child fee buckets
+        List<AdditionalGuestFeeModel> childFees = additionalFees.stream()
+                .filter(fee -> GuestTypeEnum.CHILD.equals(fee.getGuestType()))
+                .filter(fee -> fee.getAgeBucket() != null)
+                .collect(Collectors.toList());
+
+        if (childFees.isEmpty()) {
+            return BigDecimal.ZERO;
+        }
+
+        // Calculate optimal fees using dynamic programming approach
+        BigDecimal maxTotalFees = calculateOptimalChildFees(children, childFees, finalNightlyRate);
+
+        log.debug("Optimal child fees: {}", maxTotalFees);
+        return maxTotalFees;
     }
 
     /**
-     * Finds day-specific rate in a rate table for a given day of week
+     *  Calcule les fees optimaux en considérant toutes les combinaisons
      */
+    private BigDecimal calculateOptimalChildFees(List<ChildResource> children,
+                                                 List<AdditionalGuestFeeModel> childFees,
+                                                 BigDecimal finalNightlyRate) {
+
+        // Convert children to a map for easier processing
+        Map<Integer, Integer> childrenByAge = children.stream()
+                .collect(Collectors.groupingBy(
+                        ChildResource::getAge,
+                        Collectors.summingInt(ChildResource::getQuantity)
+                ));
+
+        // Try all possible combinations of bucket assignments
+        return findMaxFeesCombination(new ArrayList<>(childrenByAge.keySet()),
+                childrenByAge, childFees, finalNightlyRate);
+    }
+
+    /**
+     *  Trouve la combinaison optimale de buckets
+     */
+    private BigDecimal findMaxFeesCombination(List<Integer> ages,
+                                              Map<Integer, Integer> childrenByAge,
+                                              List<AdditionalGuestFeeModel> childFees,
+                                              BigDecimal finalNightlyRate) {
+
+        BigDecimal maxFees = BigDecimal.ZERO;
+
+        // Generate all possible bucket combinations for the given ages
+        List<BucketCombination> combinations = generateBucketCombinations(ages, childFees);
+
+        for (BucketCombination combination : combinations) {
+            BigDecimal totalFeesForCombination = calculateFeesForCombination(
+                    combination, childrenByAge, finalNightlyRate);
+            maxFees = maxFees.max(totalFeesForCombination);
+
+            log.debug("Combination: {} -> Fees: {}", combination, totalFeesForCombination);
+        }
+
+        return maxFees;
+    }
+
+    /**
+     *  Génère toutes les combinaisons possibles de buckets
+     */
+    private List<BucketCombination> generateBucketCombinations(List<Integer> ages,
+                                                               List<AdditionalGuestFeeModel> childFees) {
+        List<BucketCombination> combinations = new ArrayList<>();
+
+        // Option 1: Individual age assignments
+        combinations.add(createIndividualAgeCombination(ages, childFees));
+
+        // Option 2: Group assignments (buckets that cover multiple ages)
+        combinations.addAll(createGroupCombinations(ages, childFees));
+
+        return combinations;
+    }
+
+    /**
+     *  Crée la combinaison par âge individuel
+     */
+    private BucketCombination createIndividualAgeCombination(List<Integer> ages,
+                                                             List<AdditionalGuestFeeModel> childFees) {
+        BucketCombination combination = new BucketCombination();
+
+        for (Integer age : ages) {
+            // Find best bucket for this specific age
+            AdditionalGuestFeeModel bestBucket = findBestBucketForAge(age, childFees);
+            if (bestBucket != null) {
+                combination.addAssignment(age, bestBucket);
+            }
+        }
+
+        return combination;
+    }
+
+    /**
+     * Crée les combinaisons de groupes
+     */
+    private List<BucketCombination> createGroupCombinations(List<Integer> ages,
+                                                            List<AdditionalGuestFeeModel> childFees) {
+        List<BucketCombination> groupCombinations = new ArrayList<>();
+
+        // For each bucket, check if it can cover multiple ages
+        for (AdditionalGuestFeeModel bucket : childFees) {
+            List<Integer> coveredAges = ages.stream()
+                    .filter(age -> age >= bucket.getAgeBucket().getFromAge() &&
+                            age <= bucket.getAgeBucket().getToAge())
+                    .collect(Collectors.toList());
+
+            if (coveredAges.size() > 1) {
+                // This bucket can cover multiple ages - create a group combination
+                BucketCombination groupCombination = new BucketCombination();
+                for (Integer age : coveredAges) {
+                    groupCombination.addAssignment(age, bucket);
+                }
+                groupCombinations.add(groupCombination);
+            }
+        }
+
+        return groupCombinations;
+    }
+
+    /**
+     * Trouve le meilleur bucket pour un âge spécifique
+     */
+    private AdditionalGuestFeeModel findBestBucketForAge(Integer age, List<AdditionalGuestFeeModel> childFees) {
+        return childFees.stream()
+                .filter(fee -> age >= fee.getAgeBucket().getFromAge() &&
+                        age <= fee.getAgeBucket().getToAge())
+                .max((fee1, fee2) -> {
+                    // Compare based on fee value (higher percentage/amount = better for hotel)
+                    if (fee1.getAmountType() == fee2.getAmountType()) {
+                        return fee1.getValue().compareTo(fee2.getValue());
+                    }
+                    // If different types, prefer PERCENT over FLAT for comparison
+                    return fee1.getAmountType() == AmountTypeEnum.PERCENT ? 1 : -1;
+                })
+                .orElse(null);
+    }
+
+    /**
+     * Calcule les fees pour une combinaison donnée
+     */
+    private BigDecimal calculateFeesForCombination(BucketCombination combination,
+                                                   Map<Integer, Integer> childrenByAge,
+                                                   BigDecimal finalNightlyRate) {
+        BigDecimal totalFees = BigDecimal.ZERO;
+
+        // Group assignments by bucket to avoid double counting
+        Map<AdditionalGuestFeeModel, List<Integer>> bucketToAges = new HashMap<>();
+
+        for (Map.Entry<Integer, AdditionalGuestFeeModel> entry : combination.getAssignments().entrySet()) {
+            Integer age = entry.getKey();
+            AdditionalGuestFeeModel bucket = entry.getValue();
+
+            bucketToAges.computeIfAbsent(bucket, k -> new ArrayList<>()).add(age);
+        }
+
+        // Calculate fees for each bucket
+        for (Map.Entry<AdditionalGuestFeeModel, List<Integer>> entry : bucketToAges.entrySet()) {
+            AdditionalGuestFeeModel bucket = entry.getKey();
+            List<Integer> agesInBucket = entry.getValue();
+
+            // Calculate total children covered by this bucket
+            int totalChildrenInBucket = agesInBucket.stream()
+                    .mapToInt(age -> childrenByAge.getOrDefault(age, 0))
+                    .sum();
+
+            // Calculate fees for this bucket
+            int extraChildren = Math.max(0, totalChildrenInBucket - bucket.getGuestCount());
+
+            if (extraChildren > 0) {
+                BigDecimal bucketFee;
+
+                if (AmountTypeEnum.PERCENT.equals(bucket.getAmountType())) {
+                    bucketFee = finalNightlyRate.multiply(bucket.getValue())
+                            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP)
+                            .multiply(BigDecimal.valueOf(extraChildren));
+                } else {
+                    bucketFee = bucket.getValue().multiply(BigDecimal.valueOf(extraChildren));
+                }
+
+                totalFees = totalFees.add(bucketFee);
+
+                log.debug("Bucket {}-{}: {} children -> {} extra -> fee: {}",
+                        bucket.getAgeBucket().getFromAge(), bucket.getAgeBucket().getToAge(),
+                        totalChildrenInBucket, extraChildren, bucketFee);
+            }
+        }
+
+        return totalFees;
+    }
+
+    /**
+     * Représente une combinaison d'assignation âges->buckets
+     */
+    private static class BucketCombination {
+        private final Map<Integer, AdditionalGuestFeeModel> assignments = new HashMap<>();
+
+        public void addAssignment(Integer age, AdditionalGuestFeeModel bucket) {
+            assignments.put(age, bucket);
+        }
+
+        public Map<Integer, AdditionalGuestFeeModel> getAssignments() {
+            return assignments;
+        }
+
+        @Override
+        public String toString() {
+            return assignments.entrySet().stream()
+                    .map(entry -> "Age " + entry.getKey() + " -> " +
+                            entry.getValue().getAgeBucket().getFromAge() + "-" +
+                            entry.getValue().getAgeBucket().getToAge())
+                    .collect(Collectors.joining(", "));
+        }
+    }
+
+    private BigDecimal calculateMaxFeeForAge(int age, int quantity,
+                                             List<AdditionalGuestFeeModel> additionalFees,
+                                             BigDecimal finalNightlyRate) {
+        BigDecimal maxFee = BigDecimal.ZERO;
+
+        // Find all buckets that cover this age
+        List<AdditionalGuestFeeModel> applicableFees = additionalFees.stream()
+                .filter(fee -> GuestTypeEnum.CHILD.equals(fee.getGuestType()))
+                .filter(fee -> fee.getAgeBucket() != null)
+                .filter(fee -> age >= fee.getAgeBucket().getFromAge() && age <= fee.getAgeBucket().getToAge())
+                .collect(Collectors.toList());
+
+        // Calculate fee for each applicable bucket and take MAX
+        for (AdditionalGuestFeeModel fee : applicableFees) {
+            int extraChildren = Math.max(0, quantity - fee.getGuestCount());
+
+            if (extraChildren > 0) {
+                BigDecimal feeAmount;
+
+                if (AmountTypeEnum.PERCENT.equals(fee.getAmountType())) {
+                    // Use final nightly rate for percentage calculations
+                    feeAmount = finalNightlyRate.multiply(fee.getValue())
+                            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP)
+                            .multiply(BigDecimal.valueOf(extraChildren));
+                } else {
+                    // FLAT amount
+                    feeAmount = fee.getValue().multiply(BigDecimal.valueOf(extraChildren));
+                }
+
+                maxFee = maxFee.max(feeAmount);
+
+                log.debug("Fee for age {} in bucket {}-{}: {} ({}% of {} × {} extra children)",
+                        age, fee.getAgeBucket().getFromAge(), fee.getAgeBucket().getToAge(),
+                        feeAmount, fee.getValue(), finalNightlyRate, extraChildren);
+            }
+        }
+
+        return maxFee;
+    }
+
     private BigDecimal findDaySpecificRateInTable(DayOfWeek dayOfWeek, RateTableModel rateTable) {
+        if (rateTable == null || CollectionUtils.isEmpty(rateTable.getDaySpecificRates())) {
+            return null;
+        }
+
         return rateTable.getDaySpecificRates().stream()
                 .filter(dsr -> dsr.getDays().contains(dayOfWeek))
                 .map(DaySpecificRateModel::getNightly)
@@ -418,10 +621,11 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
                 .orElse(null);
     }
 
-    /**
-     * Finds day-specific rate in a default rate for a given day of week
-     */
     private BigDecimal findDaySpecificRateInDefault(DayOfWeek dayOfWeek, DefaultRateModel defaultRate) {
+        if (defaultRate == null || CollectionUtils.isEmpty(defaultRate.getDaySpecificRates())) {
+            return null;
+        }
+
         return defaultRate.getDaySpecificRates().stream()
                 .filter(dsr -> dsr.getDays().contains(dayOfWeek))
                 .map(DaySpecificRateModel::getNightly)
@@ -429,202 +633,27 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
                 .orElse(null);
     }
 
-    /**
-     * Applies additional guest fees to night rates (refactored from original method)
-     */
-    private void applyFeesToNightRates(List<NightRateGetResource> nightRates, GuestsResource guests,
-                                       List<AdditionalGuestFeeModel> additionalFees) {
-        if (CollectionUtils.isEmpty(additionalFees)) {
-            log.debug("No additional guest fees defined, skipping fee application");
-            return;
-        }
-
-        // Calculate fee amounts for adults and children
-        BigDecimal adultFeeAmount = calculateAdultFees(guests.getAdults(), additionalFees);
-        Map<String, BigDecimal> childFeeAmounts = calculateChildFees(guests.getChildren(), additionalFees);
-
-        log.debug("Calculated fee amounts - Adults: {}, Children: {}", adultFeeAmount, childFeeAmounts);
-
-        // Apply fees to each night rate
-        for (NightRateGetResource nightRate : nightRates) {
-            BigDecimal baseRate = nightRate.getRate();
-
-            // Apply adult fees (can be FLAT or PERCENT)
-            BigDecimal totalAdultFee = calculateFinalFeeAmount(baseRate, adultFeeAmount, additionalFees, GuestTypeEnum.ADULT);
-
-            // Apply child fees (can be FLAT or PERCENT)
-            BigDecimal totalChildFee = BigDecimal.ZERO;
-            for (Map.Entry<String, BigDecimal> childEntry : childFeeAmounts.entrySet()) {
-                BigDecimal childFeeForBucket = calculateFinalFeeAmount(baseRate, childEntry.getValue(), additionalFees, GuestTypeEnum.CHILD);
-                totalChildFee = totalChildFee.add(childFeeForBucket);
-            }
-
-            // Update the night rate with all additional fees
-            BigDecimal finalRate = baseRate.add(totalAdultFee).add(totalChildFee);
-            nightRate.setRate(finalRate);
-
-            log.debug("Applied fees to {}: {} + {} (adult) + {} (child) = {}",
-                    nightRate.getDate(), baseRate, totalAdultFee, totalChildFee, finalRate);
-        }
-
-        log.debug("Successfully applied additional guest fees to all night rates");
-    }
-
-    /**
-     * Calculates additional fees for adults
-     */
-    private BigDecimal calculateAdultFees(int adultCount, List<AdditionalGuestFeeModel> additionalFees) {
-        log.debug("Calculating adult fees for {} adults", adultCount);
-
-        Optional<AdditionalGuestFeeModel> adultFee = additionalFees.stream()
-                .filter(fee -> GuestTypeEnum.ADULT.equals(fee.getGuestType()))
-                .findFirst();
-
-        if (adultFee.isEmpty()) {
-            log.debug("No adult fee configuration found");
-            return BigDecimal.ZERO;
-        }
-
-        int extraAdults = Math.max(0, adultCount - 1);
-        if (extraAdults == 0) {
-            log.debug("No extra adults, no additional fee");
-            return BigDecimal.ZERO;
-        }
-
-        AdditionalGuestFeeModel fee = adultFee.get();
-        BigDecimal feePerGuest = fee.getValue();
-        BigDecimal totalFee = feePerGuest.multiply(BigDecimal.valueOf(extraAdults));
-
-        log.debug("Adult fee calculation: {} extra adults × {} {} = {}",
-                extraAdults, feePerGuest, fee.getAmountType(), totalFee);
-
-        return totalFee;
-    }
-
-    /**
-     * Calculates additional fees for children based on age buckets
-     */
-    private Map<String, BigDecimal> calculateChildFees(List<ChildResource> children, List<AdditionalGuestFeeModel> additionalFees) {
-        Map<String, BigDecimal> childFeesByBucket = new HashMap<>();
-
-        if (CollectionUtils.isEmpty(children)) {
-            log.debug("No children, no child fees");
-            return childFeesByBucket;
-        }
-
-        log.debug("Calculating child fees for {} child entries", children.size());
-
-        List<AdditionalGuestFeeModel> childFees = additionalFees.stream()
-                .filter(fee -> GuestTypeEnum.CHILD.equals(fee.getGuestType()))
-                .filter(fee -> fee.getAgeBucket() != null)
-                .collect(Collectors.toList());
-
-        if (childFees.isEmpty()) {
-            log.debug("No child fee configurations found");
-            return childFeesByBucket;
-        }
-
-        for (AdditionalGuestFeeModel childFee : childFees) {
-            AgeBucketEmbeddable ageBucket = childFee.getAgeBucket();
-            String bucketId = ageBucket.getFromAge() + "-" + ageBucket.getToAge();
-            int totalChildrenInBucket = 0;
-
-            for (ChildResource child : children) {
-                if (child.getAge() >= ageBucket.getFromAge() && child.getAge() <= ageBucket.getToAge()) {
-                    totalChildrenInBucket += child.getQuantity();
-                }
-            }
-
-            int extraChildren = Math.max(0, totalChildrenInBucket - 1);
-            if (extraChildren > 0) {
-                BigDecimal feeForThisBucket = childFee.getValue().multiply(BigDecimal.valueOf(extraChildren));
-                childFeesByBucket.put(bucketId, feeForThisBucket);
-
-                log.debug("Child fee for age bucket {}: {} extra children × {} {} = {}",
-                        bucketId, extraChildren, childFee.getValue(), childFee.getAmountType(), feeForThisBucket);
-            }
-        }
-
-        return childFeesByBucket;
-    }
-
-    /**
-     * Calculates the final fee amount considering FLAT vs PERCENT fee types
-     */
-    private BigDecimal calculateFinalFeeAmount(BigDecimal baseRate, BigDecimal feeAmount,
-                                               List<AdditionalGuestFeeModel> additionalFees,
-                                               GuestTypeEnum guestType) {
-        if (feeAmount.compareTo(BigDecimal.ZERO) == 0) {
-            return BigDecimal.ZERO;
-        }
-
-        Optional<AdditionalGuestFeeModel> feeConfig = additionalFees.stream()
-                .filter(fee -> guestType.equals(fee.getGuestType()))
-                .findFirst();
-
-        if (feeConfig.isEmpty()) {
-            return feeAmount;
-        }
-
-        if (AmountTypeEnum.PERCENT.equals(feeConfig.get().getAmountType())) {
-            BigDecimal percentageValue = feeConfig.get().getValue();
-            BigDecimal percentageFee = baseRate.multiply(percentageValue).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-            BigDecimal extraGuestMultiplier = feeAmount.divide(percentageValue, 2, RoundingMode.HALF_UP);
-            BigDecimal totalPercentageFee = percentageFee.multiply(extraGuestMultiplier);
-
-            log.debug("Percentage fee calculation: {}% of {} × {} extra guests = {}",
-                    percentageValue, baseRate, extraGuestMultiplier, totalPercentageFee);
-
-            return totalPercentageFee;
-        }
-
-        return feeAmount;
-    }
-
-    /**
-     * Calculates the total amount for all nights
-     */
     private BigDecimal calculateTotalAmount(List<NightRateGetResource> nightRates) {
-        BigDecimal total = nightRates.stream()
+        return nightRates.stream()
                 .map(NightRateGetResource::getRate)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        log.debug("Calculated total amount: {}", total);
-        return total;
     }
 
-    /**
-     * Calculates the average rate across all nights
-     */
     private BigDecimal calculateAverageRate(List<NightRateGetResource> nightRates) {
         if (nightRates.isEmpty()) {
             return BigDecimal.ZERO;
         }
 
         BigDecimal total = calculateTotalAmount(nightRates);
-        BigDecimal average = total.divide(BigDecimal.valueOf(nightRates.size()), 2, RoundingMode.HALF_UP);
-
-        log.debug("Calculated average rate: {}", average);
-        return average;
+        return total.divide(BigDecimal.valueOf(nightRates.size()), 2, RoundingMode.HALF_UP);
     }
 
-
-    /**
-     * Creates an empty unit pricing result when no pricing rules are available
-     *
-     * @param unitId The unit ID
-     * @return Empty UnitPricingGetResource indicating pricing calculation failed
-     */
     private UnitPricingGetResource createEmptyUnitPricing(String unitId) {
-        log.debug("Creating empty pricing result for unit: {}", unitId);
-
         UnitPricingGetResource emptyPricing = new UnitPricingGetResource();
         emptyPricing.setId(unitId);
-        emptyPricing.setNightRates(new ArrayList<>()); // Empty list
+        emptyPricing.setNightRates(new ArrayList<>());
         emptyPricing.setNightlyRate(BigDecimal.ZERO);
         emptyPricing.setTotalAmount(BigDecimal.ZERO);
-
         return emptyPricing;
     }
 }
-

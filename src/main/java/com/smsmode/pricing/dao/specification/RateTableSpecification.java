@@ -1,7 +1,9 @@
 package com.smsmode.pricing.dao.specification;
 
 import com.smsmode.pricing.enumeration.RateTableTypeEnum;
+import com.smsmode.pricing.model.RatePlanModel_;
 import com.smsmode.pricing.model.RateTableModel;
+import com.smsmode.pricing.model.RateTableModel_;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.ObjectUtils;
 
@@ -18,7 +20,7 @@ public class RateTableSpecification {
     public static Specification<RateTableModel> withRatePlanUuid(String ratePlanUuid) {
         return (root, query, criteriaBuilder) ->
                 ObjectUtils.isEmpty(ratePlanUuid) ? criteriaBuilder.conjunction() :
-                        criteriaBuilder.equal(root.get("ratePlan").get("id"), ratePlanUuid);
+                        criteriaBuilder.equal(root.get(RateTableModel_.ratePlan).get(RatePlanModel_.id), ratePlanUuid);
     }
 
     /**
@@ -28,7 +30,7 @@ public class RateTableSpecification {
         return (root, query, criteriaBuilder) ->
                 ObjectUtils.isEmpty(name) ? criteriaBuilder.conjunction() :
                         criteriaBuilder.like(
-                                criteriaBuilder.lower(root.get("name")),
+                                criteriaBuilder.lower(root.get(RateTableModel_.name)),
                                 "%" + name.toLowerCase() + "%"
                         );
     }
@@ -39,7 +41,7 @@ public class RateTableSpecification {
     public static Specification<RateTableModel> withType(RateTableTypeEnum type) {
         return (root, query, criteriaBuilder) ->
                 type == null ? criteriaBuilder.conjunction() :
-                        criteriaBuilder.equal(root.get("type"), type);
+                        criteriaBuilder.equal(root.get(RateTableModel_.type), type);
     }
 
     /**
@@ -52,15 +54,12 @@ public class RateTableSpecification {
                 return criteriaBuilder.conjunction();
             }
 
-            // Same rate plan and same type
-            var ratePlanCondition = criteriaBuilder.equal(root.get("ratePlan").get("id"), ratePlanUuid);
-            var typeCondition = criteriaBuilder.equal(root.get("type"), type);
+            var ratePlanCondition = criteriaBuilder.equal(root.get(RateTableModel_.ratePlan).get(RatePlanModel_.id), ratePlanUuid);
+            var typeCondition = criteriaBuilder.equal(root.get(RateTableModel_.type), type);
 
-            // Overlapping logic: NOT (endDate < other.startDate OR startDate > other.endDate)
-            // Which is equivalent to: (endDate >= other.startDate AND startDate <= other.endDate)
             var overlapCondition = criteriaBuilder.and(
-                    criteriaBuilder.lessThanOrEqualTo(root.get("startDate"), endDate),
-                    criteriaBuilder.greaterThanOrEqualTo(root.get("endDate"), startDate)
+                    criteriaBuilder.lessThanOrEqualTo(root.get(RateTableModel_.startDate), endDate),
+                    criteriaBuilder.greaterThanOrEqualTo(root.get(RateTableModel_.endDate), startDate)
             );
 
             return criteriaBuilder.and(ratePlanCondition, typeCondition, overlapCondition);
@@ -69,12 +68,11 @@ public class RateTableSpecification {
 
     /**
      * Creates specification to exclude a specific rate table by ID.
-     * Used in UPDATE operations to exclude the current rate table from overlap validation.
      */
     public static Specification<RateTableModel> excludingId(String excludeId) {
         return (root, query, criteriaBuilder) ->
                 ObjectUtils.isEmpty(excludeId) ? criteriaBuilder.conjunction() :
-                        criteriaBuilder.notEqual(root.get("id"), excludeId);
+                        criteriaBuilder.notEqual(root.get(RateTableModel_.id), excludeId);
     }
 
     // ========== PRICING CALCULATION SPECIFICATIONS ==========
@@ -97,11 +95,9 @@ public class RateTableSpecification {
                 return criteriaBuilder.conjunction();
             }
 
-            // Coverage logic: rate table overlaps with stay period
-            // startDate <= checkoutDate AND endDate >= checkinDate
             return criteriaBuilder.and(
-                    criteriaBuilder.lessThanOrEqualTo(root.get("startDate"), checkoutDate),
-                    criteriaBuilder.greaterThanOrEqualTo(root.get("endDate"), checkinDate)
+                    criteriaBuilder.lessThanOrEqualTo(root.get(RateTableModel_.startDate), checkoutDate),
+                    criteriaBuilder.greaterThanOrEqualTo(root.get(RateTableModel_.endDate), checkinDate)
             );
         };
     }
@@ -122,11 +118,9 @@ public class RateTableSpecification {
                 return criteriaBuilder.conjunction();
             }
 
-            // Specific date coverage: date is within rate table's date range
-            // startDate <= date <= endDate
             return criteriaBuilder.and(
-                    criteriaBuilder.lessThanOrEqualTo(root.get("startDate"), date),
-                    criteriaBuilder.greaterThanOrEqualTo(root.get("endDate"), date)
+                    criteriaBuilder.lessThanOrEqualTo(root.get(RateTableModel_.startDate), date),
+                    criteriaBuilder.greaterThanOrEqualTo(root.get(RateTableModel_.endDate), date)
             );
         };
     }
@@ -144,8 +138,7 @@ public class RateTableSpecification {
                 return criteriaBuilder.conjunction();
             }
 
-            // Active rate tables: endDate >= referenceDate
-            return criteriaBuilder.greaterThanOrEqualTo(root.get("endDate"), referenceDate);
+            return criteriaBuilder.greaterThanOrEqualTo(root.get(RateTableModel_.endDate), referenceDate);
         };
     }
 
@@ -159,11 +152,10 @@ public class RateTableSpecification {
     public static Specification<RateTableModel> withTypeForPricing(RateTableTypeEnum type) {
         return (root, query, criteriaBuilder) -> {
             if (type == null) {
-                // Default to STANDARD type for pricing calculations
-                return criteriaBuilder.equal(root.get("type"), RateTableTypeEnum.STANDARD);
+                return criteriaBuilder.equal(root.get(RateTableModel_.type), RateTableTypeEnum.STANDARD);
             }
 
-            return criteriaBuilder.equal(root.get("type"), type);
+            return criteriaBuilder.equal(root.get(RateTableModel_.type), type);
         };
     }
 }

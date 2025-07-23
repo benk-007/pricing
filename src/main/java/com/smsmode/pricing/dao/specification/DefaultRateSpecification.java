@@ -1,5 +1,6 @@
 package com.smsmode.pricing.dao.specification;
 
+import com.smsmode.pricing.embeddable.UnitRefEmbeddable_;
 import com.smsmode.pricing.model.DefaultRateModel;
 import com.smsmode.pricing.model.DefaultRateModel_;
 import org.springframework.data.jpa.domain.Specification;
@@ -16,6 +17,6 @@ public class DefaultRateSpecification {
     public static Specification<DefaultRateModel> withUnitId(String unitId) {
         return (root, query, criteriaBuilder) ->
                 ObjectUtils.isEmpty(unitId) ? criteriaBuilder.conjunction() :
-                        criteriaBuilder.equal(root.get("unit").get("id"), unitId);
+                        criteriaBuilder.equal(root.get(DefaultRateModel_.unit).get(UnitRefEmbeddable_.id), unitId);
     }
 }
