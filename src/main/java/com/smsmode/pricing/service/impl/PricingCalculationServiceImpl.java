@@ -30,8 +30,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Simplified PricingCalculationService implementation.
- *
  * Business Logic:
  * 1. For each day: Rate table → Default rate → Empty
  * 2. No partial fallback - either full rate table or full default rate
@@ -127,16 +125,15 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
         Integer maxStay = null;
 
         if (foundRatePlan != null) {
-            // Cas rate plan - vérifier quel source a été utilisé pour check-in date
+            // find Rate Table for check-in date
             RateTableModel checkinRateTable = rateTableDaoService.findRateTableForDate(foundRatePlan.getId(), checkinDate);
 
             if (checkinRateTable != null) {
-                // Rate table utilisé pour check-in date
                 minStay = checkinRateTable.getMinStay();
                 maxStay = checkinRateTable.getMaxStay();
                 log.debug("Using rate table minStay/maxStay for check-in date: {}/{}", minStay, maxStay);
             } else {
-                // Default rate utilisé pour check-in date
+                // Default rate used for check-in date
                 DefaultRateModel defaultRate = defaultRateDaoService.findWithRelatedDataForPricing(unitId);
                 if (defaultRate != null) {
                     minStay = defaultRate.getMinStay();
@@ -145,7 +142,7 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
                 }
             }
         } else {
-            // Cas default rate seulement
+            // Only default Rate
             DefaultRateModel defaultRate = defaultRateDaoService.findWithRelatedDataForPricing(unitId);
             if (defaultRate != null) {
                 minStay = defaultRate.getMinStay();
