@@ -12,6 +12,8 @@ import com.smsmode.pricing.service.FeeService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -68,6 +70,19 @@ public class FeeServiceImpl implements FeeService {
         }
 
         return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ResponseEntity<Page<FeeGetResource>> getAll(String unitId, String search, Pageable pageable) {
+        log.debug("Retrieving fees with filters - unitId: {}, search: {}", unitId, search);
+
+        Page<FeeModel> feeModelPage = feeDaoService.findWithFilters(unitId, search, pageable);
+        log.info("Retrieved {} fees from database", feeModelPage.getTotalElements());
+
+        Page<FeeGetResource> response = feeModelPage.map(feeMapper::modelToGetResource);
+
+        return ResponseEntity.ok(response);
     }
 
 }

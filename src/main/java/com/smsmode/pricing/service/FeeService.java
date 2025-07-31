@@ -3,6 +3,8 @@ package com.smsmode.pricing.service;
 import com.smsmode.pricing.resource.fee.ApplyFeesToUnitsResource;
 import com.smsmode.pricing.resource.fee.FeeGetResource;
 import com.smsmode.pricing.resource.fee.FeePostResource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 
 public interface FeeService {
@@ -10,5 +12,7 @@ public interface FeeService {
     ResponseEntity<FeeGetResource> create(FeePostResource feePostResource);
 
     ResponseEntity<Void> applyFeesToUnits(ApplyFeesToUnitsResource resource, boolean overwrite);
+
+    ResponseEntity<Page<FeeGetResource>> getAll(String unitId, String search, Pageable pageable);
 
 }

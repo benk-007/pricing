@@ -2,12 +2,16 @@ package com.smsmode.pricing.dao.service.impl;
 
 import com.smsmode.pricing.dao.repository.FeeRepository;
 import com.smsmode.pricing.dao.service.FeeDaoService;
+import com.smsmode.pricing.dao.specification.FeeSpecification;
 import com.smsmode.pricing.exception.ResourceNotFoundException;
 import com.smsmode.pricing.exception.enumeration.ResourceNotFoundExceptionTitleEnum;
 import com.smsmode.pricing.model.FeeModel;
 import com.smsmode.pricing.model.RatePlanModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 @Slf4j
@@ -33,5 +37,17 @@ public class FeeDaoServiceImpl implements FeeDaoService {
                     "Fee with ID [" + feeId + "] not found");
         });
     }
+
+    @Override
+    public Page<FeeModel> findWithFilters(String unitId, String search, Pageable pageable) {
+        log.debug("Finding fees with filters - unitId: {}, search: {}", unitId, search);
+
+        Specification<FeeModel> specification = Specification
+                .where(FeeSpecification.withUnitId(unitId))
+                .and(FeeSpecification.withNameContaining(search));
+
+        return feeRepository.findAll(specification, pageable);
+    }
+
 
 }
