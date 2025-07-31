@@ -62,8 +62,7 @@ public class FeeServiceImpl implements FeeService {
         }
 
         for (String feeId : resource.getFeeIds()) {
-            FeeModel fee = feeRepository.findById(feeId)
-                    .orElseThrow(() -> new EntityNotFoundException("Fee not found: " + feeId));
+            FeeModel fee = feeDaoService.findById(feeId);
             fee.getUnits().addAll(unitRefs);
             feeRepository.save(fee);
         }

@@ -2,6 +2,8 @@ package com.smsmode.pricing.dao.service.impl;
 
 import com.smsmode.pricing.dao.repository.FeeRepository;
 import com.smsmode.pricing.dao.service.FeeDaoService;
+import com.smsmode.pricing.exception.ResourceNotFoundException;
+import com.smsmode.pricing.exception.enumeration.ResourceNotFoundExceptionTitleEnum;
 import com.smsmode.pricing.model.FeeModel;
 import com.smsmode.pricing.model.RatePlanModel;
 import lombok.RequiredArgsConstructor;
@@ -20,4 +22,16 @@ public class FeeDaoServiceImpl implements FeeDaoService {
         log.debug("Saving rate plan: {}", FeeModel.getName());
         return feeRepository.save(FeeModel);
     }
+
+    @Override
+    public FeeModel findById(String feeId) {
+        log.debug("Finding fee by ID: {}", feeId);
+        return feeRepository.findById(feeId).orElseThrow(() -> {
+            log.debug("Fee with ID [{}] not found", feeId);
+            return new ResourceNotFoundException(
+                    ResourceNotFoundExceptionTitleEnum.FEE_NOT_FOUND,
+                    "Fee with ID [" + feeId + "] not found");
+        });
+    }
+
 }

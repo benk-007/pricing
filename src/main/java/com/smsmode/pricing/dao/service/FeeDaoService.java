@@ -5,4 +5,7 @@ import com.smsmode.pricing.model.FeeModel;
 public interface FeeDaoService {
 
     FeeModel save(FeeModel FeeModel);
+
+    FeeModel findById(String feeId);
+
 }
