@@ -5,11 +5,11 @@ import com.smsmode.pricing.dao.service.FeeDaoService;
 import com.smsmode.pricing.embeddable.UnitRefEmbeddable;
 import com.smsmode.pricing.mapper.FeeMapper;
 import com.smsmode.pricing.model.FeeModel;
-import com.smsmode.pricing.resource.fee.ApplyFeesToUnitsResource;
+import com.smsmode.pricing.resource.fee.CopyFeesToUnitsResource;
 import com.smsmode.pricing.resource.fee.FeeGetResource;
+import com.smsmode.pricing.resource.fee.FeePatchResource;
 import com.smsmode.pricing.resource.fee.FeePostResource;
 import com.smsmode.pricing.service.FeeService;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -50,38 +50,67 @@ public class FeeServiceImpl implements FeeService {
 
     @Override
     @Transactional
-    public ResponseEntity<Void> applyFeesToUnits(ApplyFeesToUnitsResource resource, boolean overwrite) {
-        Set<UnitRefEmbeddable> unitRefs = resource.getUnitIds().stream()
+    public ResponseEntity<Void> copyFeesToUnits(CopyFeesToUnitsResource resource, boolean overwrite) {
+        List<UnitRefEmbeddable> targetUnits = resource.getUnitIds().stream()
                 .filter(StringUtils::hasText)
                 .map(UnitRefEmbeddable::new)
-                .collect(Collectors.toSet());
+                .toList();
 
         if (overwrite) {
-            List<FeeModel> allFees = feeRepository.findAll();
-            for (FeeModel fee : allFees) {
-                fee.getUnits().removeIf(unitRefs::contains);
+            for (UnitRefEmbeddable target : targetUnits) {
+                feeDaoService.deleteAllByUnit(target.getId());
             }
         }
 
         for (String feeId : resource.getFeeIds()) {
-            FeeModel fee = feeDaoService.findById(feeId);
-            fee.getUnits().addAll(unitRefs);
-            feeRepository.save(fee);
+            FeeModel originalFee = feeDaoService.findById(feeId);
+
+            for (UnitRefEmbeddable target : targetUnits) {
+                FeeModel copiedFee = new FeeModel();
+                copiedFee.setName(originalFee.getName());
+                copiedFee.setAmount(originalFee.getAmount());
+                copiedFee.setType(originalFee.getType());
+                copiedFee.setModality(originalFee.getModality());
+                copiedFee.setDescription(originalFee.getDescription());
+                copiedFee.setActive(originalFee.isActive());
+                copiedFee.setUnit(target);
+
+                feeDaoService.save(copiedFee);
+            }
         }
 
         return ResponseEntity.noContent().build();
     }
 
+
+
     @Override
     @Transactional(readOnly = true)
-    public ResponseEntity<Page<FeeGetResource>> getAll(String unitId, String search, Pageable pageable) {
-        log.debug("Retrieving fees with filters - unitId: {}, search: {}", unitId, search);
+    public ResponseEntity<Page<FeeGetResource>> getAll(Set<String> unitIds, String search, Pageable pageable) {
+        log.debug("Retrieving fees with filters - unitIds: {}, search: {}", unitIds, search);
 
-        Page<FeeModel> feeModelPage = feeDaoService.findWithFilters(unitId, search, pageable);
+        Page<FeeModel> feeModelPage = feeDaoService.findWithFilters(unitIds, search, pageable);
         log.info("Retrieved {} fees from database", feeModelPage.getTotalElements());
 
         Page<FeeGetResource> response = feeModelPage.map(feeMapper::modelToGetResource);
 
+        return ResponseEntity.ok(response);
+    }
+
+    @Override
+    @Transactional
+    public ResponseEntity<FeeGetResource> update(String feeId, FeePatchResource feePatchResource) {
+        log.debug("Updating fee with ID: {}", feeId);
+
+        FeeModel existingFee = feeDaoService.findById(feeId);
+        log.debug("Found existing fee: {}", existingFee.getId());
+
+        feeMapper.updateModelFromPatchResource(feePatchResource, existingFee);
+
+        FeeModel updatedFee = feeDaoService.save(existingFee);
+        log.info("Successfully updated fee with ID: {}", feeId);
+
+        FeeGetResource response = feeMapper.modelToGetResource(updatedFee);
         return ResponseEntity.ok(response);
     }
 

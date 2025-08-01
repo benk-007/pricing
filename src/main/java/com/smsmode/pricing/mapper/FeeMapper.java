@@ -3,9 +3,11 @@ package com.smsmode.pricing.mapper;
 import com.smsmode.pricing.model.FeeModel;
 import com.smsmode.pricing.resource.common.AuditGetResource;
 import com.smsmode.pricing.resource.fee.FeeGetResource;
+import com.smsmode.pricing.resource.fee.FeePatchResource;
 import com.smsmode.pricing.resource.fee.FeePostResource;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
 /**
  * Mapper for Fee entities and resources.
@@ -22,7 +24,7 @@ public abstract class FeeMapper {
     @Mapping(target = "modifiedAt", ignore = true)
     @Mapping(target = "modifiedBy", ignore = true)
     @Mapping(target = "active", source = "active")
-    @Mapping(target = "units", expression = "java(Set.of(feePostResource.getUnit()))")
+    @Mapping(target = "unit", source = "unit")
     public abstract FeeModel postResourceToModel(FeePostResource feePostResource);
 
     /**
@@ -30,6 +32,14 @@ public abstract class FeeMapper {
      */
     @Mapping(target = "audit", source = ".")
     public abstract FeeGetResource modelToGetResource(FeeModel feeModel);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "modifiedAt", ignore = true)
+    @Mapping(target = "modifiedBy", ignore = true)
+    @Mapping(target = "unit",ignore = true)
+    public abstract void updateModelFromPatchResource(FeePatchResource patchResource, @MappingTarget FeeModel feeModel);
 
     /**
      * Maps audit fields into an audit resource.

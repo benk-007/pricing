@@ -38,10 +38,6 @@ public class FeeModel extends AbstractBaseModel {
     @Column(name = "ACTIVE", nullable = false)
     private boolean active = true;
 
-    @ElementCollection(fetch = FetchType.LAZY)
-    @CollectionTable(
-            name = "FEE_UNIT_MAPPING",
-            joinColumns = @JoinColumn(name = "FEE_ID")
-    )
-    private Set<UnitRefEmbeddable> units = new HashSet<>();
+    @Embedded
+    private UnitRefEmbeddable unit;
 }

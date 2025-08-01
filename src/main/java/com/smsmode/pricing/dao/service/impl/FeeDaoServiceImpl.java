@@ -13,6 +13,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -39,15 +43,23 @@ public class FeeDaoServiceImpl implements FeeDaoService {
     }
 
     @Override
-    public Page<FeeModel> findWithFilters(String unitId, String search, Pageable pageable) {
-        log.debug("Finding fees with filters - unitId: {}, search: {}", unitId, search);
+    public Page<FeeModel> findWithFilters(Set<String> unitIds, String search, Pageable pageable) {
+        log.debug("Finding fees with filters - unitIds: {}, search: {}", unitIds, search);
 
         Specification<FeeModel> specification = Specification
-                .where(FeeSpecification.withUnitId(unitId))
+                .where(FeeSpecification.withUnitIds(unitIds))
                 .and(FeeSpecification.withNameContaining(search));
 
         return feeRepository.findAll(specification, pageable);
     }
 
+    @Override
+    @Transactional
+    public void deleteAllByUnit(String unitId) {
+        log.debug("Deleting all fees for unitId: {}", unitId);
+        Specification<FeeModel> spec = FeeSpecification.withUnitId(unitId);
+        List<FeeModel> feesToDelete = feeRepository.findAll(spec);
+        feeRepository.deleteAll(feesToDelete);
+    }
 
 }
