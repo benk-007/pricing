@@ -62,4 +62,9 @@ public class FeeDaoServiceImpl implements FeeDaoService {
         feeRepository.deleteAll(feesToDelete);
     }
 
+    @Override
+    public void delete(FeeModel fee) {
+        feeRepository.delete(fee);
+    }
+
 }

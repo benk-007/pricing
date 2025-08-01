@@ -40,4 +40,7 @@ public interface FeeController {
             @Valid @RequestBody FeePatchResource feePatchResource
     );
 
+    @DeleteMapping("/{feeId}")
+    ResponseEntity<Void> delete(@PathVariable String feeId);
+
 }

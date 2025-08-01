@@ -45,4 +45,9 @@ public class FeeControllerImpl implements FeeController {
         return feeService.update(feeId, feePatchResource);
     }
 
+    @Override
+    public ResponseEntity<Void> delete(String feeId) {
+        return feeService.delete(feeId);
+    }
+
 }

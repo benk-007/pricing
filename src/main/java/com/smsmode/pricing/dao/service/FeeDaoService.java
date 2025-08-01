@@ -15,4 +15,5 @@ public interface FeeDaoService {
 
     void deleteAllByUnit(String unitId);
 
+    void delete(FeeModel fee);
 }

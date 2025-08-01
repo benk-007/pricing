@@ -19,4 +19,5 @@ public interface FeeService {
 
     ResponseEntity<FeeGetResource> update(String feeId, FeePatchResource feePatchResource);
 
+    ResponseEntity<Void> delete(String feeId);
 }

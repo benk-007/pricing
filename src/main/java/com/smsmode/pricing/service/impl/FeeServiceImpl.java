@@ -140,4 +140,16 @@ public class FeeServiceImpl implements FeeService {
         return ResponseEntity.ok(response);
     }
 
+    @Override
+    @Transactional
+    public ResponseEntity<Void> delete(String feeId) {
+        log.debug("Deleting fee with ID: {}", feeId);
+
+        FeeModel fee = feeDaoService.findById(feeId);
+        feeDaoService.delete(fee);
+
+        log.info("Successfully deleted fee with ID: {}", feeId);
+        return ResponseEntity.noContent().build();
+    }
+
 }
