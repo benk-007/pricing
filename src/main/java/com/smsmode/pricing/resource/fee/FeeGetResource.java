@@ -17,6 +17,7 @@ public class FeeGetResource {
     private FeeTypeEnum type;
     private FeeModalityEnum modality;
     private String description;
+    private boolean active;
     private Set<UnitRefEmbeddable> units;
     private AuditGetResource audit;
 }

@@ -30,4 +30,7 @@ public class FeePostResource {
     @NotNull
     private UnitRefEmbeddable unit;
 
+    @NotNull
+    private Boolean active;
+
 }

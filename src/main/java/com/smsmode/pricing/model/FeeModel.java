@@ -35,6 +35,9 @@ public class FeeModel extends AbstractBaseModel {
     @Column(name = "DESCRIPTION")
     private String description;
 
+    @Column(name = "ACTIVE", nullable = false)
+    private boolean active = true;
+
     @ElementCollection(fetch = FetchType.LAZY)
     @CollectionTable(
             name = "FEE_UNIT_MAPPING",

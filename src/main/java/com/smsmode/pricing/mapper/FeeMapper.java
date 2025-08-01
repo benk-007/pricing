@@ -21,6 +21,7 @@ public abstract class FeeMapper {
     @Mapping(target = "createdBy", ignore = true)
     @Mapping(target = "modifiedAt", ignore = true)
     @Mapping(target = "modifiedBy", ignore = true)
+    @Mapping(target = "active", source = "active")
     @Mapping(target = "units", expression = "java(Set.of(feePostResource.getUnit()))")
     public abstract FeeModel postResourceToModel(FeePostResource feePostResource);
 

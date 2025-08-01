@@ -22,6 +22,9 @@ public interface FeeController {
     );
 
     @GetMapping
-    ResponseEntity<Page<FeeGetResource>> getAll(@RequestParam String unitId, @RequestParam(required = false) String search, Pageable pageable);
-
+    ResponseEntity<Page<FeeGetResource>> getAll(
+            @RequestParam(required = false) String unitId,
+            @RequestParam(required = false) String search,
+            Pageable pageable
+    );
 }
