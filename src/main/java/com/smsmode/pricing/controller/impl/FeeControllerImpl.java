@@ -1,10 +1,7 @@
 package com.smsmode.pricing.controller.impl;
 
 import com.smsmode.pricing.controller.FeeController;
-import com.smsmode.pricing.resource.fee.CopyFeesToUnitsResource;
-import com.smsmode.pricing.resource.fee.FeeGetResource;
-import com.smsmode.pricing.resource.fee.FeePatchResource;
-import com.smsmode.pricing.resource.fee.FeePostResource;
+import com.smsmode.pricing.resource.fee.*;
 import com.smsmode.pricing.service.FeeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +28,12 @@ public class FeeControllerImpl implements FeeController {
     public ResponseEntity<Void> copyFeesToUnits(CopyFeesToUnitsResource resource, boolean overwrite) {
         return feeService.copyFeesToUnits(resource, overwrite);
     }
+
+    @Override
+    public ResponseEntity<Void> copyFeesFromUnits(CopyFeesFromUnitsResource resource, boolean overwrite) {
+        return feeService.copyFeesFromUnits(resource, overwrite);
+    }
+
 
     @Override
     public ResponseEntity<Page<FeeGetResource>> getAll(Set<String> unitIds, String search, Pageable pageable) {

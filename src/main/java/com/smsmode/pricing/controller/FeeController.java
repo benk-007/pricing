@@ -1,9 +1,6 @@
 package com.smsmode.pricing.controller;
 
-import com.smsmode.pricing.resource.fee.CopyFeesToUnitsResource;
-import com.smsmode.pricing.resource.fee.FeeGetResource;
-import com.smsmode.pricing.resource.fee.FeePatchResource;
-import com.smsmode.pricing.resource.fee.FeePostResource;
+import com.smsmode.pricing.resource.fee.*;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +18,12 @@ public interface FeeController {
     @PostMapping("/copyTo")
     ResponseEntity<Void> copyFeesToUnits(
             @RequestBody CopyFeesToUnitsResource resource,
+            @RequestParam(defaultValue = "false") boolean overwrite
+    );
+
+    @PostMapping("/copyFrom")
+    ResponseEntity<Void> copyFeesFromUnits(
+            @RequestBody CopyFeesFromUnitsResource resource,
             @RequestParam(defaultValue = "false") boolean overwrite
     );
 

@@ -5,10 +5,7 @@ import com.smsmode.pricing.dao.service.FeeDaoService;
 import com.smsmode.pricing.embeddable.UnitRefEmbeddable;
 import com.smsmode.pricing.mapper.FeeMapper;
 import com.smsmode.pricing.model.FeeModel;
-import com.smsmode.pricing.resource.fee.CopyFeesToUnitsResource;
-import com.smsmode.pricing.resource.fee.FeeGetResource;
-import com.smsmode.pricing.resource.fee.FeePatchResource;
-import com.smsmode.pricing.resource.fee.FeePostResource;
+import com.smsmode.pricing.resource.fee.*;
 import com.smsmode.pricing.service.FeeService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.net.URI;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -77,6 +75,34 @@ public class FeeServiceImpl implements FeeService {
 
                 feeDaoService.save(copiedFee);
             }
+        }
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @Override
+    @Transactional
+    public ResponseEntity<Void> copyFeesFromUnits(CopyFeesFromUnitsResource resource, boolean overwrite) {
+        String targetUnitId = resource.getUnitId();
+        UnitRefEmbeddable targetUnit = new UnitRefEmbeddable(targetUnitId);
+
+        if (overwrite) {
+            feeDaoService.deleteAllByUnit(targetUnitId);
+        }
+
+        for (String feeId : resource.getFeeIds()) {
+            FeeModel originalFee = feeDaoService.findById(feeId);
+
+            FeeModel copiedFee = new FeeModel();
+            copiedFee.setName(originalFee.getName());
+            copiedFee.setAmount(originalFee.getAmount());
+            copiedFee.setType(originalFee.getType());
+            copiedFee.setModality(originalFee.getModality());
+            copiedFee.setDescription(originalFee.getDescription());
+            copiedFee.setActive(originalFee.isActive());
+            copiedFee.setUnit(targetUnit);
+
+            feeDaoService.save(copiedFee);
         }
 
         return ResponseEntity.noContent().build();
