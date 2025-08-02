@@ -40,7 +40,7 @@ public class RateTableDaoServiceImpl implements RateTableDaoService {
         log.debug("Finding rate tables with filters - ratePlanUuid: {}, search: {}", ratePlanUuid, search);
 
         Specification<RateTableModel> specification = Specification
-                .where(RateTableSpecification.withRatePlanUuid(ratePlanUuid))
+                .where(RateTableSpecification.withRatePlanId(ratePlanUuid))
                 .and(RateTableSpecification.withNameContaining(search));
 
         return rateTableRepository.findAll(specification, pageable);
@@ -92,7 +92,7 @@ public class RateTableDaoServiceImpl implements RateTableDaoService {
             // Step 1: Build specification for rate tables that overlap with the stay period
             // A rate table overlaps if: startDate <= checkoutDate AND endDate >= checkinDate
             Specification<RateTableModel> specification = Specification
-                    .where(RateTableSpecification.withRatePlanUuid(ratePlanId))
+                    .where(RateTableSpecification.withRatePlanId(ratePlanId))
                     .and(RateTableSpecification.withDateRangeCoverage(checkinDate, checkoutDate));
 
             // Step 2: Execute query and sort by start date
@@ -117,7 +117,7 @@ public class RateTableDaoServiceImpl implements RateTableDaoService {
         try {
             // Step 1: Build specification for rate table covering specific date
             Specification<RateTableModel> specification = Specification
-                    .where(RateTableSpecification.withRatePlanUuid(ratePlanId))
+                    .where(RateTableSpecification.withRatePlanId(ratePlanId))
                     .and(RateTableSpecification.withSpecificDateCoverage(date));
 
             // Step 2: Find first matching rate table
@@ -146,7 +146,7 @@ public class RateTableDaoServiceImpl implements RateTableDaoService {
 
         try {
             // Step 1: Build specification for all rate tables of a rate plan
-            Specification<RateTableModel> specification = RateTableSpecification.withRatePlanUuid(ratePlanId);
+            Specification<RateTableModel> specification = RateTableSpecification.withRatePlanId(ratePlanId);
 
             // Step 2: Execute query and sort by start date
             List<RateTableModel> rateTables = rateTableRepository.findAll(specification)
@@ -161,5 +161,21 @@ public class RateTableDaoServiceImpl implements RateTableDaoService {
             log.error("Error finding rate tables for rate plan: {}", ratePlanId, e);
             return List.of(); // Return empty list instead of null
         }
+    }
+
+    @Override
+    public boolean existsBy(Specification<RateTableModel> specification) {
+
+        return rateTableRepository.exists(specification);
+    }
+
+    @Override
+    public RateTableModel findOneBy(Specification<RateTableModel> specification) {
+        return rateTableRepository.findOne(specification).orElseThrow(() -> {
+            log.warn("No rate table found corresponding to specification. Will throw an error ...");
+            return new ResourceNotFoundException(
+                    ResourceNotFoundExceptionTitleEnum.RATE_TABLE_NOT_FOUND,
+                    "No rate table found based on your criteria");
+        });
     }
 }

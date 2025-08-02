@@ -1,6 +1,6 @@
 package com.smsmode.pricing.resource.pricecalculation;
 
-import com.smsmode.pricing.resource.common.GuestsResource;
+import com.smsmode.pricing.resource.calculate.GuestsPostResource;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -18,7 +18,7 @@ public class PriceCalculationPostResource {
 
     @Valid
     @NotNull(message = "Guests information is required")
-    private GuestsResource guests;
+    private GuestsPostResource guests;
 
     private String segmentId; // Optional
 

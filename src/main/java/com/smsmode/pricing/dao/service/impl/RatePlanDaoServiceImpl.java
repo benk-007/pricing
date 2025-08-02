@@ -87,4 +87,24 @@ public class RatePlanDaoServiceImpl implements RatePlanDaoService {
         log.debug("Deleting rate plan: {}", ratePlanModel.getId());
         ratePlanRepository.delete(ratePlanModel);
     }
+
+    @Override
+    public Page<RatePlanModel> findAll(Specification<RatePlanModel> specification, Pageable unpaged) {
+        return ratePlanRepository.findAll(specification, unpaged);
+    }
+
+    @Override
+    public boolean existsBy(Specification<RatePlanModel> specification) {
+        return ratePlanRepository.exists(specification);
+    }
+
+    @Override
+    public RatePlanModel findOneBy(Specification<RatePlanModel> specification) {
+        return ratePlanRepository.findOne(specification).orElseThrow(() -> {
+            log.warn("No rate plan found corresponding to specification. Will throw an error ...");
+            return new ResourceNotFoundException(
+                    ResourceNotFoundExceptionTitleEnum.RATE_PLAN_NOT_FOUND,
+                    "No rate plan found based on your criteria");
+        });
+    }
 }

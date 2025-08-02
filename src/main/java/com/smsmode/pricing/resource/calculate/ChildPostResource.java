@@ -1,4 +1,4 @@
-package com.smsmode.pricing.resource.common;
+package com.smsmode.pricing.resource.calculate;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -6,7 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
-public class ChildResource {
+public class ChildPostResource {
     @NotNull(message = "Child age is required")
     @Min(value = 0, message = "Age cannot be negative")
     @Max(value = 17, message = "Age cannot exceed 17")

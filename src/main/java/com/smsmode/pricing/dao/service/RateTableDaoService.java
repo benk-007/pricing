@@ -4,6 +4,7 @@ import com.smsmode.pricing.enumeration.RateTableTypeEnum;
 import com.smsmode.pricing.model.RateTableModel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -72,4 +73,8 @@ public interface RateTableDaoService {
      * @return List of all rate tables for this rate plan
      */
     List<RateTableModel> findByRatePlanId(String ratePlanId);
+
+    boolean existsBy(Specification<RateTableModel> specification);
+
+    RateTableModel findOneBy(Specification<RateTableModel> specification);
 }

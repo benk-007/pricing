@@ -1,9 +1,11 @@
 package com.smsmode.pricing.dao.specification;
 
 import com.smsmode.pricing.enumeration.RateTableTypeEnum;
+import com.smsmode.pricing.model.RatePlanModel;
 import com.smsmode.pricing.model.RatePlanModel_;
 import com.smsmode.pricing.model.RateTableModel;
 import com.smsmode.pricing.model.RateTableModel_;
+import jakarta.persistence.criteria.Join;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.ObjectUtils;
 
@@ -17,10 +19,15 @@ public class RateTableSpecification {
     /**
      * Creates specification to find rate tables by rate plan UUID.
      */
-    public static Specification<RateTableModel> withRatePlanUuid(String ratePlanUuid) {
-        return (root, query, criteriaBuilder) ->
-                ObjectUtils.isEmpty(ratePlanUuid) ? criteriaBuilder.conjunction() :
-                        criteriaBuilder.equal(root.get(RateTableModel_.ratePlan).get(RatePlanModel_.id), ratePlanUuid);
+    public static Specification<RateTableModel> withRatePlanId(String ratePlanId) {
+        return (root, query, criteriaBuilder) -> {
+            if (ObjectUtils.isEmpty(ratePlanId)) {
+                return criteriaBuilder.conjunction();
+            } else {
+                Join<RateTableModel, RatePlanModel> join = root.join(RateTableModel_.ratePlan);
+                return criteriaBuilder.equal(join.get(RatePlanModel_.id), ratePlanId);
+            }
+        };
     }
 
     /**
@@ -80,12 +87,12 @@ public class RateTableSpecification {
     /**
      * Creates specification to find rate tables that cover (overlap with) a date range.
      * Used for finding rate tables that apply to a stay period.
-     *
+     * <p>
      * Coverage Logic:
      * - A rate table covers a date range if there's any overlap
      * - Overlap exists when: rateTable.startDate <= checkoutDate AND rateTable.endDate >= checkinDate
      *
-     * @param checkinDate The check-in date
+     * @param checkinDate  The check-in date
      * @param checkoutDate The check-out date (exclusive)
      * @return Specification for rate tables covering the date range
      */
@@ -105,7 +112,7 @@ public class RateTableSpecification {
     /**
      * Creates specification to find rate table that covers a specific date.
      * Used for finding the rate table that applies to a particular night.
-     *
+     * <p>
      * Coverage Logic:
      * - A rate table covers a date if: rateTable.startDate <= date <= rateTable.endDate
      *
@@ -139,6 +146,16 @@ public class RateTableSpecification {
             }
 
             return criteriaBuilder.equal(root.get(RateTableModel_.type), type);
+        };
+    }
+
+    public static Specification<RateTableModel> withDateWithinInclusive(LocalDate date) {
+        return (root, query, cb) -> {
+            if (date == null) return cb.conjunction();
+            return cb.and(
+                    cb.lessThanOrEqualTo(root.get(RateTableModel_.startDate), date),
+                    cb.greaterThanOrEqualTo(root.get(RateTableModel_.endDate), date)
+            );
         };
     }
 }

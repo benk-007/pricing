@@ -6,8 +6,8 @@ import com.smsmode.pricing.dao.service.RateTableDaoService;
 import com.smsmode.pricing.enumeration.AmountTypeEnum;
 import com.smsmode.pricing.enumeration.GuestTypeEnum;
 import com.smsmode.pricing.model.*;
-import com.smsmode.pricing.resource.common.ChildResource;
-import com.smsmode.pricing.resource.common.GuestsResource;
+import com.smsmode.pricing.resource.calculate.ChildPostResource;
+import com.smsmode.pricing.resource.calculate.GuestsPostResource;
 import com.smsmode.pricing.resource.common.NightRateGetResource;
 import com.smsmode.pricing.resource.common.UnitPricingGetResource;
 import com.smsmode.pricing.resource.pricecalculation.PriceCalculationPostResource;
@@ -88,7 +88,7 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
     }
 
     private UnitPricingGetResource calculatePricingForUnit(String unitId, LocalDate checkinDate,
-                                                           LocalDate checkoutDate, GuestsResource guests,
+                                                           LocalDate checkoutDate, GuestsPostResource guests,
                                                            String segmentId) {
         log.debug("Calculating pricing for unit: {}, dates: {} to {}", unitId, checkinDate, checkoutDate);
 
@@ -166,7 +166,7 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
 
     private List<NightRateGetResource> tryCalculateFromRatePlan(String unitId, String segmentId,
                                                                 LocalDate checkinDate, LocalDate checkoutDate,
-                                                                GuestsResource guests) {
+                                                                GuestsPostResource guests) {
         try {
             Set<String> segmentUuids = Set.of(segmentId);
             List<RatePlanModel> ratePlans = ratePlanDaoService.findEnabledRatePlansWithOverlappingSegments(segmentUuids);
@@ -192,7 +192,7 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
     }
 
     private List<NightRateGetResource> tryCalculateFromDefaultRate(String unitId, LocalDate checkinDate,
-                                                                   LocalDate checkoutDate, GuestsResource guests) {
+                                                                   LocalDate checkoutDate, GuestsPostResource guests) {
         try {
             DefaultRateModel defaultRate = defaultRateDaoService.findWithRelatedDataForPricing(unitId);
             if (defaultRate == null) {
@@ -213,7 +213,7 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
      * Calculates daily rates from rate plan with simple fallback logic
      */
     private List<NightRateGetResource> calculateDailyRatesFromRatePlan(LocalDate checkinDate, LocalDate checkoutDate,
-                                                                       RatePlanModel ratePlan, GuestsResource guests) {
+                                                                       RatePlanModel ratePlan, GuestsPostResource guests) {
         List<NightRateGetResource> nightRates = new ArrayList<>();
         LocalDate currentDate = checkinDate;
 
@@ -254,7 +254,7 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
      * Calculates daily rates using default rate only
      */
     private List<NightRateGetResource> calculateDailyRatesFromDefaultRate(LocalDate checkinDate, LocalDate checkoutDate,
-                                                                          DefaultRateModel defaultRate, GuestsResource guests) {
+                                                                          DefaultRateModel defaultRate, GuestsPostResource guests) {
         List<NightRateGetResource> nightRates = new ArrayList<>();
         LocalDate currentDate = checkinDate;
 
@@ -275,7 +275,7 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
     /**
      * Calculates rate from rate table (nightly + day-specific + additional fees)
      */
-    private BigDecimal calculateRateFromRateTable(LocalDate date, RateTableModel rateTable, GuestsResource guests) {
+    private BigDecimal calculateRateFromRateTable(LocalDate date, RateTableModel rateTable, GuestsPostResource guests) {
         // Calculate base nightly rate (MAX between nightly and day-specific)
         BigDecimal baseNightlyRate = calculateBaseNightlyRate(date, rateTable.getNightly(), rateTable.getDaySpecificRates());
 
@@ -291,7 +291,7 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
     /**
      * Calculates rate from default rate (nightly + day-specific + additional fees)
      */
-    private BigDecimal calculateRateFromDefaultRate(LocalDate date, DefaultRateModel defaultRate, GuestsResource guests) {
+    private BigDecimal calculateRateFromDefaultRate(LocalDate date, DefaultRateModel defaultRate, GuestsPostResource guests) {
         // Calculate base nightly rate (MAX between nightly and day-specific)
         BigDecimal baseNightlyRate = calculateBaseNightlyRate(date, defaultRate.getNightly(), defaultRate.getDaySpecificRates());
 
@@ -331,7 +331,7 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
     /**
      * Calculates additional guest fees based on simplified guest logic
      */
-    private BigDecimal calculateAdditionalGuestFees(GuestsResource guests, List<AdditionalGuestFeeModel> additionalFees, BigDecimal baseNightlyRate) {
+    private BigDecimal calculateAdditionalGuestFees(GuestsPostResource guests, List<AdditionalGuestFeeModel> additionalFees, BigDecimal baseNightlyRate) {
         if (CollectionUtils.isEmpty(additionalFees)) {
             log.debug("No additional guest fees defined");
             return BigDecimal.ZERO;
@@ -414,7 +414,7 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
     /**
      * Calculates child additional fees (grouped by age buckets)
      */
-    private BigDecimal calculateChildAdditionalFees(List<ChildResource> children, int additionalChildren,
+    private BigDecimal calculateChildAdditionalFees(List<ChildPostResource> children, int additionalChildren,
                                                     List<AdditionalGuestFeeModel> additionalFees, BigDecimal baseNightlyRate) {
         if (CollectionUtils.isEmpty(children)) {
             return BigDecimal.ZERO;
@@ -434,8 +434,8 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
         // Group children by age for processing (but maintain total additional children logic)
         Map<Integer, Integer> childrenByAge = children.stream()
                 .collect(Collectors.groupingBy(
-                        ChildResource::getAge,
-                        Collectors.summingInt(ChildResource::getQuantity)
+                        ChildPostResource::getAge,
+                        Collectors.summingInt(ChildPostResource::getQuantity)
                 ));
 
         BigDecimal totalChildFees = BigDecimal.ZERO;
@@ -496,11 +496,11 @@ public class PricingCalculationServiceImpl implements PricingCalculationService 
     /**
      * Gets total number of children
      */
-    private int getTotalChildren(List<ChildResource> children) {
+    private int getTotalChildren(List<ChildPostResource> children) {
         if (CollectionUtils.isEmpty(children)) {
             return 0;
         }
-        return children.stream().mapToInt(ChildResource::getQuantity).sum();
+        return children.stream().mapToInt(ChildPostResource::getQuantity).sum();
     }
 
     private BigDecimal calculateTotalAmount(List<NightRateGetResource> nightRates) {

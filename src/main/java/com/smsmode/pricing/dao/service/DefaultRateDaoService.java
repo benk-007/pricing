@@ -7,6 +7,7 @@ package com.smsmode.pricing.dao.service;
 import com.smsmode.pricing.model.DefaultRateModel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 
 /**
@@ -56,4 +57,8 @@ public interface DefaultRateDaoService {
      * @return true if default rate exists, false otherwise
      */
     boolean existsByUnitId(String unitId);
+
+    DefaultRateModel findOneBy(Specification<DefaultRateModel> specification);
+
+    boolean existsBy(Specification<DefaultRateModel> specification);
 }

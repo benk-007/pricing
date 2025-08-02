@@ -10,10 +10,8 @@ import com.smsmode.pricing.dao.specification.DefaultRateSpecification;
 import com.smsmode.pricing.exception.ResourceNotFoundException;
 import com.smsmode.pricing.exception.enumeration.ResourceNotFoundExceptionTitleEnum;
 import com.smsmode.pricing.model.DefaultRateModel;
-import jakarta.persistence.EntityGraph;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import jakarta.persistence.TypedQuery;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -21,9 +19,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Implementation of DefaultRateDaoService for managing default rate data access.
@@ -140,4 +136,20 @@ public class DefaultRateDaoServiceImpl implements DefaultRateDaoService {
             return false;
         }
     }
+
+    @Override
+    public DefaultRateModel findOneBy(Specification<DefaultRateModel> specification) {
+        return defaultRateRepository.findOne(specification).orElseThrow(() -> {
+            log.debug("Default rate not found");
+            return new ResourceNotFoundException(
+                    ResourceNotFoundExceptionTitleEnum.DEFAULT_RATE_NOT_FOUND,
+                    "Default rate not found");
+        });
+    }
+
+    @Override
+    public boolean existsBy(Specification<DefaultRateModel> specification) {
+        return defaultRateRepository.exists(specification);
+    }
+
 }
