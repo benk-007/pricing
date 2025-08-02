@@ -4,8 +4,10 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
+import lombok.ToString;
 
 @Data
+@ToString
 public class ChildPostResource {
     @NotNull(message = "Child age is required")
     @Min(value = 0, message = "Age cannot be negative")

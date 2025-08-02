@@ -10,11 +10,13 @@ import com.smsmode.pricing.dao.service.RateTableDaoService;
 import com.smsmode.pricing.dao.specification.DefaultRateSpecification;
 import com.smsmode.pricing.dao.specification.RatePlanSpecification;
 import com.smsmode.pricing.dao.specification.RateTableSpecification;
+import com.smsmode.pricing.embeddable.AgeBucketEmbeddable;
 import com.smsmode.pricing.enumeration.AmountTypeEnum;
 import com.smsmode.pricing.enumeration.GuestTypeEnum;
 import com.smsmode.pricing.enumeration.RateTableTypeEnum;
 import com.smsmode.pricing.model.*;
 import com.smsmode.pricing.resource.calculate.BookingPostResource;
+import com.smsmode.pricing.resource.calculate.ChildPostResource;
 import com.smsmode.pricing.resource.calculate.GuestsPostResource;
 import com.smsmode.pricing.resource.calculate.UnitBookingRateGetResource;
 import com.smsmode.pricing.service.RateEngineService;
@@ -175,26 +177,54 @@ public class RateEngineServiceImpl implements RateEngineService {
                 log.debug("Adult Guest additional fee is specified, will calculate and update the new amount ...");
                 int adultGuests = Math.max(0, guests.getAdults() - adultFeeOptional.get().getGuestCount());
                 if (adultGuests >= 1) {
-                    BigDecimal adultFeeAmount = getAdultFeeAmount(adultFeeOptional.get(), adultGuests, nightly);
+                    BigDecimal adultFeeAmount = getGuestFeeAmount(adultFeeOptional.get(), adultGuests, nightly);
                     amount = amount.add(adultFeeAmount);
+                }
+            }
+            if (!CollectionUtils.isEmpty(guests.getChildren())) {
+                log.debug("Children are specified within booking, will check if there's any child guest additional fee specified ...");
+                boolean hasChildFee = additionalGuestFeeModels.stream()
+                        .anyMatch(fee -> fee.getGuestType() == GuestTypeEnum.CHILD);
+                if (hasChildFee) {
+                    log.debug("Child Guest additional fee is specified, will calculate and update the new amount if it matches ...");
+                    List<AdditionalGuestFeeModel> childFees = additionalGuestFeeModels.stream()
+                            .filter(fee -> fee.getGuestType() == GuestTypeEnum.CHILD).toList();
+                    log.debug("Will loop over children guests to calculate and update nightly rate ...");
+                    for (ChildPostResource childPostResource : guests.getChildren()) {
+                        log.debug("Processing child entry: {} ...", childPostResource);
+                        int age = childPostResource.getAge();
+                        Optional<AdditionalGuestFeeModel> matchingFeeOpt = childFees.stream()
+                                .filter(fee -> {
+                                    AgeBucketEmbeddable ageBucket = fee.getAgeBucket();
+                                    return age >= ageBucket.getFromAge() && age <= ageBucket.getToAge();
+                                })
+                                .findFirst();
+                        if (matchingFeeOpt.isPresent()) {
+                            int childGuests = Math.max(0, (childPostResource.getQuantity() + 1) - matchingFeeOpt.get().getGuestCount());
+                            if (childGuests >= 1) {
+                                BigDecimal childFeeAmount = getGuestFeeAmount(matchingFeeOpt.get(), childGuests, nightly);
+                                amount = amount.add(childFeeAmount);
+                            }
+                        } else {
+                            log.debug("No fee rule found for child age {}, skipping.", age);
+                        }
+
+                    }
                 }
             }
         }
 
-        //calculating children prices
-
-
         return amount.setScale(2, RoundingMode.HALF_UP);
     }
 
-    private static BigDecimal getAdultFeeAmount(AdditionalGuestFeeModel adultFeeOptional, Integer adultGuests, BigDecimal nightly) {
-        BigDecimal adultFeeAmount;
-        if (adultFeeOptional.getAmountType().equals(AmountTypeEnum.FLAT)) {
-            adultFeeAmount = adultFeeOptional.getValue().multiply(BigDecimal.valueOf(adultGuests));
+    private static BigDecimal getGuestFeeAmount(AdditionalGuestFeeModel guestFee, Integer guestCount, BigDecimal nightly) {
+        BigDecimal guestFeeAmount;
+        if (guestFee.getAmountType().equals(AmountTypeEnum.FLAT)) {
+            guestFeeAmount = guestFee.getValue().multiply(BigDecimal.valueOf(guestCount));
         } else {
-            adultFeeAmount = nightly.multiply(adultFeeOptional.getValue()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(adultGuests));
+            guestFeeAmount = nightly.multiply(guestFee.getValue()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP).multiply(BigDecimal.valueOf(guestCount));
         }
-        return adultFeeAmount;
+        return guestFeeAmount;
     }
 
 
