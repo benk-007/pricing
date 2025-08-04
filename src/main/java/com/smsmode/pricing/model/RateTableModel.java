@@ -1,5 +1,6 @@
 package com.smsmode.pricing.model;
 
+import com.smsmode.pricing.enumeration.OccupancyModeEnum;
 import com.smsmode.pricing.enumeration.RateTableTypeEnum;
 import com.smsmode.pricing.model.base.AbstractBaseModel;
 import jakarta.persistence.*;
@@ -57,9 +58,12 @@ public class RateTableModel extends AbstractBaseModel {
     @Column(name = "MAX_OCCUPANCY")
     private Integer maxOccupancy;
 
+    private OccupancyModeEnum occupancyMode = OccupancyModeEnum.UNIT;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "RATE_PLAN_ID", nullable = false)
     private RatePlanModel ratePlan;
+
 
     @OneToMany(mappedBy = "rateTable", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("createdAt ASC")

@@ -7,22 +7,15 @@ package com.smsmode.pricing.resource.calculate;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.Set;
 
 /**
  * TODO: add your documentation
  *
  * @author hamzahabchi (contact: hamza.habchi@messaging-technologies.com)
- * <p>Created 31 Jul 2025</p>
+ * <p>Created 04 Aug 2025</p>
  */
 @Data
-public class BookingPostResource {
-    private LocalDate checkinDate;
-    private LocalDate checkoutDate;
-    private GuestsPostResource guests;
-    private String segmentId;
-    private String subSegmentId;
-    Set<UnitOccupancyPostResource> units;
-    BigDecimal globalOccupancy;
+public class UnitOccupancyPostResource {
+    private String id;
+    private BigDecimal occupancy;
 }

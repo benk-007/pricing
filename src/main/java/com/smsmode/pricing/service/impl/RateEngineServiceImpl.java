@@ -13,12 +13,10 @@ import com.smsmode.pricing.dao.specification.RateTableSpecification;
 import com.smsmode.pricing.embeddable.AgeBucketEmbeddable;
 import com.smsmode.pricing.enumeration.AmountTypeEnum;
 import com.smsmode.pricing.enumeration.GuestTypeEnum;
+import com.smsmode.pricing.enumeration.OccupancyModeEnum;
 import com.smsmode.pricing.enumeration.RateTableTypeEnum;
 import com.smsmode.pricing.model.*;
-import com.smsmode.pricing.resource.calculate.BookingPostResource;
-import com.smsmode.pricing.resource.calculate.ChildPostResource;
-import com.smsmode.pricing.resource.calculate.GuestsPostResource;
-import com.smsmode.pricing.resource.calculate.UnitBookingRateGetResource;
+import com.smsmode.pricing.resource.calculate.*;
 import com.smsmode.pricing.service.RateEngineService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,17 +54,17 @@ public class RateEngineServiceImpl implements RateEngineService {
     public ResponseEntity<Map<String, UnitBookingRateGetResource>> calculateBookingRate(BookingPostResource bookingPostResource) {
         Map<String, UnitBookingRateGetResource> unitPricing = new HashMap<>();
         List<LocalDate> bookingDates = getDatesBetween(bookingPostResource.getCheckinDate(), bookingPostResource.getCheckoutDate());
-        for (String unitId : bookingPostResource.getUnitIds()) {
-            unitPricing.put(unitId, this.calculateBookingRateForUnit(bookingDates, bookingPostResource, unitId));
+        for (UnitOccupancyPostResource unit : bookingPostResource.getUnits()) {
+            unitPricing.put(unit.getId(), this.calculateBookingRateForUnit(bookingDates, bookingPostResource, unit));
         }
         return ResponseEntity.ok(unitPricing);
     }
 
-    UnitBookingRateGetResource calculateBookingRateForUnit(List<LocalDate> bookingDates, BookingPostResource bookingPostResource, String unitId) {
+    UnitBookingRateGetResource calculateBookingRateForUnit(List<LocalDate> bookingDates, BookingPostResource bookingPostResource, UnitOccupancyPostResource unit) {
         DefaultRateModel defaultRateModel = null;
-        if (defaultRateDaoService.existsBy(DefaultRateSpecification.withUnitId(unitId))) {
-            log.debug("Retrieving default rate for unit with Id: {} from database ...", unitId);
-            defaultRateModel = defaultRateDaoService.findOneBy(DefaultRateSpecification.withUnitId(unitId));
+        if (defaultRateDaoService.existsBy(DefaultRateSpecification.withUnitId(unit.getId()))) {
+            log.debug("Retrieving default rate for unit with Id: {} from database ...", unit.getId());
+            defaultRateModel = defaultRateDaoService.findOneBy(DefaultRateSpecification.withUnitId(unit.getId()));
         }
         String segmentId = null;
         if (!ObjectUtils.isEmpty(bookingPostResource.getSubSegmentId())) {
@@ -77,24 +75,24 @@ public class RateEngineServiceImpl implements RateEngineService {
 
         RatePlanModel ratePlanModel = null;
         if (ratePlanDaoService.existsBy(Specification.where(RatePlanSpecification.withEnabled(true)
-                        .and(RatePlanSpecification.withUnitId(unitId)))
+                        .and(RatePlanSpecification.withUnitId(unit.getId())))
                 .and(RatePlanSpecification.withSegmentId(segmentId)))) {
             ratePlanModel = ratePlanDaoService.findOneBy(Specification.where(RatePlanSpecification.withEnabled(true)
-                            .and(RatePlanSpecification.withUnitId(unitId)))
+                            .and(RatePlanSpecification.withUnitId(unit.getId())))
                     .and(RatePlanSpecification.withSegmentId(segmentId)));
         }
 
         return this.calculateBookingRateForUnitByPlan(bookingDates, bookingPostResource.getGuests(), ratePlanModel,
-                defaultRateModel);
+                defaultRateModel, bookingPostResource.getGlobalOccupancy(), unit.getOccupancy());
     }
 
-    private UnitBookingRateGetResource calculateBookingRateForUnitByPlan(List<LocalDate> bookingDates, GuestsPostResource guests, RatePlanModel ratePlan, DefaultRateModel defaultRateModel) {
+    private UnitBookingRateGetResource calculateBookingRateForUnitByPlan(List<LocalDate> bookingDates, GuestsPostResource guests, RatePlanModel ratePlan, DefaultRateModel defaultRateModel, BigDecimal globalOccupancy, BigDecimal unitOccupancy) {
 
 
         Map<LocalDate, BigDecimal> pricingPerDay = new HashMap<>();
 
         for (LocalDate date : bookingDates) {
-            BigDecimal amount = calculatePricingPerPlanAndDate(date, guests, ratePlan, defaultRateModel);
+            BigDecimal amount = calculatePricingPerPlanAndDate(date, guests, ratePlan, defaultRateModel, globalOccupancy, unitOccupancy);
             pricingPerDay.put(date, amount);
         }
 
@@ -107,58 +105,114 @@ public class RateEngineServiceImpl implements RateEngineService {
         return unitBookingRateGetResource;
     }
 
-    private BigDecimal calculatePricingPerPlanAndDate(LocalDate date, GuestsPostResource guests, RatePlanModel ratePlan, DefaultRateModel defaultRateModel) {
+    private BigDecimal calculatePricingPerPlanAndDate(LocalDate date, GuestsPostResource guests, RatePlanModel ratePlan, DefaultRateModel defaultRateModel, BigDecimal globalOccupancy, BigDecimal unitOccupancy) {
         BigDecimal amount = BigDecimal.valueOf(0);
         if (!ObjectUtils.isEmpty(ratePlan)) {
             if (rateTableDaoService.existsBy(RateTableSpecification.withRatePlanId(ratePlan.getId()).and(RatePlanSpecification.withType(RateTableTypeEnum.DYNAMIC)).and(RateTableSpecification.withDateWithinInclusive(date)))) {
                 log.info("Found dynamic rate table handling date: {} in plan with id: {}", date, ratePlan.getId());
                 log.debug("Will retrieve the dynamic table from database ...");
                 RateTableModel rateTable = rateTableDaoService.findOneBy(RateTableSpecification.withRatePlanId(ratePlan.getId()).and(RatePlanSpecification.withType(RateTableTypeEnum.DYNAMIC)).and(RateTableSpecification.withDateWithinInclusive(date)));
-
                 //calculate pricing for dynamic table
-
+                amount = this.calculateRateForDynamicTable(date, guests, rateTable, globalOccupancy, unitOccupancy);
 
             } else if (rateTableDaoService.existsBy(RateTableSpecification.withRatePlanId(ratePlan.getId()).and(RatePlanSpecification.withType(RateTableTypeEnum.STANDARD)).and(RateTableSpecification.withDateWithinInclusive(date)))) {
                 log.info("Found standard rate table handling date: {} in plan with id: {}", date, ratePlan.getId());
                 log.debug("Will retrieve the standard table from database ...");
                 RateTableModel rateTable = rateTableDaoService.findOneBy(RateTableSpecification.withRatePlanId(ratePlan.getId()).and(RatePlanSpecification.withType(RateTableTypeEnum.STANDARD)).and(RateTableSpecification.withDateWithinInclusive(date)));
-
-                //calculate pricing for standard table
-
+                amount = this.calculateRateForDefaultAndStandardTable(date, guests, rateTable.getNightly(), rateTable.getDaySpecificRates(), rateTable.getAdditionalGuestFees());
             } else {
-                //calculate pricing for default rate
                 if (!ObjectUtils.isEmpty(defaultRateModel)) {
-                    amount = this.calculatePricingPerDefaultRate(date, guests, defaultRateModel);
+                    amount = this.calculateRateForDefaultAndStandardTable(date, guests, defaultRateModel.getNightly(), defaultRateModel.getDaySpecificRates(), defaultRateModel.getAdditionalGuestFees());
                 }
             }
         } else {
-            //calculate pricing for default rate
             if (!ObjectUtils.isEmpty(defaultRateModel)) {
-                amount = this.calculatePricingPerDefaultRate(date, guests, defaultRateModel);
+                amount = this.calculateRateForDefaultAndStandardTable(date, guests, defaultRateModel.getNightly(), defaultRateModel.getDaySpecificRates(), defaultRateModel.getAdditionalGuestFees());
             }
         }
         return amount;
     }
 
-
-    private BigDecimal calculatePricingPerStandardTable(LocalDate date, GuestsPostResource guests, RateTableModel standardRateTable) {
-
-        return BigDecimal.valueOf(0);
-    }
-
-    private BigDecimal calculatePricingPerDynamicTable(LocalDate date, GuestsPostResource guests, RateTableModel dynamicRateTable) {
-
-        return BigDecimal.valueOf(0);
-    }
-
-
-    //fallback in case
-    private BigDecimal calculatePricingPerDefaultRate(LocalDate date, GuestsPostResource guests, DefaultRateModel defaultRateModel) {
+    private BigDecimal calculateRateForDynamicTable(LocalDate date, GuestsPostResource guests, RateTableModel rateTable, BigDecimal globalOccupancy, BigDecimal unitOccupancy) {
         BigDecimal amount = BigDecimal.valueOf(0);
-        BigDecimal nightly = defaultRateModel.getNightly();
-        if (!CollectionUtils.isEmpty(defaultRateModel.getDaySpecificRates())) {
+        BigDecimal nightly = BigDecimal.valueOf(0);
+        BigDecimal occupancy = rateTable.getOccupancyMode().equals(OccupancyModeEnum.GLOBAL) ? globalOccupancy : unitOccupancy;
+
+        if (!CollectionUtils.isEmpty(rateTable.getDaySpecificRates())) {
             DayOfWeek dayOfWeek = date.getDayOfWeek();
-            List<DaySpecificRateModel> daySpecificRateModels = defaultRateModel.getDaySpecificRates();
+            for (DaySpecificRateModel daySpecificRateModel : rateTable.getDaySpecificRates()) {
+                if (!CollectionUtils.isEmpty(daySpecificRateModel.getDays()) && daySpecificRateModel.getDays().contains(dayOfWeek)) {
+                    nightly = daySpecificRateModel.getNightly();
+                    break;
+                }
+            }
+        } else {
+            if (occupancy.compareTo(BigDecimal.valueOf(rateTable.getLowestOccupancy())) < 0) {
+                nightly = rateTable.getLowRate();
+            } else if (occupancy.compareTo(BigDecimal.valueOf(rateTable.getMaxOccupancy())) > 0) {
+                nightly = rateTable.getMaxRate();
+            } else {
+                BigDecimal rateDifference = rateTable.getMaxRate().subtract(rateTable.getLowRate());
+                BigDecimal plusRateValue = rateDifference
+                        .multiply(occupancy)
+                        .divide(BigDecimal.valueOf(rateTable.getMaxOccupancy()), 2, RoundingMode.HALF_UP);
+                nightly = rateTable.getLowRate().add(plusRateValue);
+            }
+        }
+        amount = amount.add(nightly);
+        if (!CollectionUtils.isEmpty(rateTable.getAdditionalGuestFees())) {
+            log.debug("Default rate contains rules related to additional guest fees, will calculate the amount in case any guests matching ...");
+            Optional<AdditionalGuestFeeModel> adultFeeOptional = rateTable.getAdditionalGuestFees().stream()
+                    .filter(fee -> GuestTypeEnum.ADULT.equals(fee.getGuestType()))
+                    .findFirst();
+            if (adultFeeOptional.isPresent()) {
+                log.debug("Adult Guest additional fee is specified, will calculate and update the new amount ...");
+                int adultGuests = Math.max(0, guests.getAdults() - adultFeeOptional.get().getGuestCount());
+                if (adultGuests >= 1) {
+                    BigDecimal adultFeeAmount = getGuestFeeAmount(adultFeeOptional.get(), adultGuests, nightly);
+                    amount = amount.add(adultFeeAmount);
+                }
+            }
+            if (!CollectionUtils.isEmpty(guests.getChildren())) {
+                log.debug("Children are specified within booking, will check if there's any child guest additional fee specified ...");
+                boolean hasChildFee = rateTable.getAdditionalGuestFees().stream()
+                        .anyMatch(fee -> fee.getGuestType() == GuestTypeEnum.CHILD);
+                if (hasChildFee) {
+                    log.debug("Child Guest additional fee is specified, will calculate and update the new amount if it matches ...");
+                    List<AdditionalGuestFeeModel> childFees = rateTable.getAdditionalGuestFees().stream()
+                            .filter(fee -> fee.getGuestType() == GuestTypeEnum.CHILD).toList();
+                    log.debug("Will loop over children guests to calculate and update nightly rate ...");
+                    for (ChildPostResource childPostResource : guests.getChildren()) {
+                        log.debug("Processing child entry: {} ...", childPostResource);
+                        int age = childPostResource.getAge();
+                        Optional<AdditionalGuestFeeModel> matchingFeeOpt = childFees.stream()
+                                .filter(fee -> {
+                                    AgeBucketEmbeddable ageBucket = fee.getAgeBucket();
+                                    return age >= ageBucket.getFromAge() && age <= ageBucket.getToAge();
+                                })
+                                .findFirst();
+                        if (matchingFeeOpt.isPresent()) {
+                            int childGuests = Math.max(0, (childPostResource.getQuantity() + 1) - matchingFeeOpt.get().getGuestCount());
+                            if (childGuests >= 1) {
+                                BigDecimal childFeeAmount = getGuestFeeAmount(matchingFeeOpt.get(), childGuests, nightly);
+                                amount = amount.add(childFeeAmount);
+                            }
+                        } else {
+                            log.debug("No fee rule found for child age {}, skipping.", age);
+                        }
+
+                    }
+                }
+            }
+        }
+        return amount.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateRateForDefaultAndStandardTable(LocalDate date, GuestsPostResource guests, BigDecimal nightly,
+                                                               List<DaySpecificRateModel> daySpecificRateModels, List<AdditionalGuestFeeModel> additionalGuestFeeModels) {
+        BigDecimal amount = BigDecimal.valueOf(0);
+        if (!CollectionUtils.isEmpty(daySpecificRateModels)) {
+            DayOfWeek dayOfWeek = date.getDayOfWeek();
             for (DaySpecificRateModel daySpecificRateModel : daySpecificRateModels) {
                 if (!CollectionUtils.isEmpty(daySpecificRateModel.getDays()) && daySpecificRateModel.getDays().contains(dayOfWeek)) {
                     nightly = daySpecificRateModel.getNightly();
@@ -167,9 +221,8 @@ public class RateEngineServiceImpl implements RateEngineService {
             }
         }
         amount = amount.add(nightly);
-        if (!CollectionUtils.isEmpty(defaultRateModel.getAdditionalGuestFees())) {
+        if (!CollectionUtils.isEmpty(additionalGuestFeeModels)) {
             log.debug("Default rate contains rules related to additional guest fees, will calculate the amount in case any guests matching ...");
-            List<AdditionalGuestFeeModel> additionalGuestFeeModels = defaultRateModel.getAdditionalGuestFees();
             Optional<AdditionalGuestFeeModel> adultFeeOptional = additionalGuestFeeModels.stream()
                     .filter(fee -> GuestTypeEnum.ADULT.equals(fee.getGuestType()))
                     .findFirst();
@@ -213,7 +266,6 @@ public class RateEngineServiceImpl implements RateEngineService {
                 }
             }
         }
-
         return amount.setScale(2, RoundingMode.HALF_UP);
     }
 
