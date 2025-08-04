@@ -13,6 +13,6 @@ import java.util.Set;
 public class RatePlanPatchResource {
     private String name;
     private Set<SegmentRefEmbeddable> segments;
-    private Boolean enabled = false;
+    private Boolean enabled;
     private UnitRefEmbeddable unit;
 }

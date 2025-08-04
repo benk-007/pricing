@@ -123,13 +123,12 @@ public class RatePlanServiceImpl implements RatePlanService {
         List<RatePlanModel> overlappingPlans = ratePlanDaoService
                 .findEnabledRatePlansWithOverlappingSegments(segmentUuids);
 
-        // Exclure le rate plan actuel (pour les updates)
+        // Exclude actual ratePlans for update
         if (excludeRatePlanId != null) {
             overlappingPlans.removeIf(plan -> plan.getId().equals(excludeRatePlanId));
         }
 
         if (!overlappingPlans.isEmpty()) {
-            // Trouver quel segment est en conflit
             RatePlanModel conflictingPlan = overlappingPlans.get(0);
             String conflictingSegment = findConflictingSegmentName(ratePlanModel, conflictingPlan);
 

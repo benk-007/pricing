@@ -35,7 +35,7 @@ public class RatePlanSpecification {
     public static Specification<RatePlanModel> withOverlappingSegments(Set<String> segmentUuids) {
         return (root, query, criteriaBuilder) -> {
             if (CollectionUtils.isEmpty(segmentUuids)) {
-                return criteriaBuilder.disjunction(); // Retourne false (aucun résultat)
+                return criteriaBuilder.disjunction(); // Retourne false (no results)
             }
 
             Join<RatePlanModel, SegmentRefEmbeddable> segmentJoin = root.join(RatePlanModel_.segments);
