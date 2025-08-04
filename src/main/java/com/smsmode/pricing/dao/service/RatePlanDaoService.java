@@ -3,6 +3,7 @@ package com.smsmode.pricing.dao.service;
 import com.smsmode.pricing.model.RatePlanModel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.Set;
@@ -41,4 +42,10 @@ public interface RatePlanDaoService {
      * Deletes a rate plan.
      */
     void delete(RatePlanModel ratePlanModel);
+
+    Page<RatePlanModel> findAll(Specification<RatePlanModel> specification, Pageable unpaged);
+
+    boolean existsBy(Specification<RatePlanModel> specification);
+
+    RatePlanModel findOneBy(Specification<RatePlanModel> specification);
 }

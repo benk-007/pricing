@@ -1,7 +1,11 @@
 package com.smsmode.pricing.dao.specification;
 
 import com.smsmode.pricing.enumeration.RateTableTypeEnum;
+import com.smsmode.pricing.model.RatePlanModel;
+import com.smsmode.pricing.model.RatePlanModel_;
 import com.smsmode.pricing.model.RateTableModel;
+import com.smsmode.pricing.model.RateTableModel_;
+import jakarta.persistence.criteria.Join;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.ObjectUtils;
 
@@ -15,10 +19,15 @@ public class RateTableSpecification {
     /**
      * Creates specification to find rate tables by rate plan UUID.
      */
-    public static Specification<RateTableModel> withRatePlanUuid(String ratePlanUuid) {
-        return (root, query, criteriaBuilder) ->
-                ObjectUtils.isEmpty(ratePlanUuid) ? criteriaBuilder.conjunction() :
-                        criteriaBuilder.equal(root.get("ratePlan").get("id"), ratePlanUuid);
+    public static Specification<RateTableModel> withRatePlanId(String ratePlanId) {
+        return (root, query, criteriaBuilder) -> {
+            if (ObjectUtils.isEmpty(ratePlanId)) {
+                return criteriaBuilder.conjunction();
+            } else {
+                Join<RateTableModel, RatePlanModel> join = root.join(RateTableModel_.ratePlan);
+                return criteriaBuilder.equal(join.get(RatePlanModel_.id), ratePlanId);
+            }
+        };
     }
 
     /**
@@ -28,7 +37,7 @@ public class RateTableSpecification {
         return (root, query, criteriaBuilder) ->
                 ObjectUtils.isEmpty(name) ? criteriaBuilder.conjunction() :
                         criteriaBuilder.like(
-                                criteriaBuilder.lower(root.get("name")),
+                                criteriaBuilder.lower(root.get(RateTableModel_.name)),
                                 "%" + name.toLowerCase() + "%"
                         );
     }
@@ -39,7 +48,7 @@ public class RateTableSpecification {
     public static Specification<RateTableModel> withType(RateTableTypeEnum type) {
         return (root, query, criteriaBuilder) ->
                 type == null ? criteriaBuilder.conjunction() :
-                        criteriaBuilder.equal(root.get("type"), type);
+                        criteriaBuilder.equal(root.get(RateTableModel_.type), type);
     }
 
     /**
@@ -52,15 +61,12 @@ public class RateTableSpecification {
                 return criteriaBuilder.conjunction();
             }
 
-            // Same rate plan and same type
-            var ratePlanCondition = criteriaBuilder.equal(root.get("ratePlan").get("id"), ratePlanUuid);
-            var typeCondition = criteriaBuilder.equal(root.get("type"), type);
+            var ratePlanCondition = criteriaBuilder.equal(root.get(RateTableModel_.ratePlan).get(RatePlanModel_.id), ratePlanUuid);
+            var typeCondition = criteriaBuilder.equal(root.get(RateTableModel_.type), type);
 
-            // Overlapping logic: NOT (endDate < other.startDate OR startDate > other.endDate)
-            // Which is equivalent to: (endDate >= other.startDate AND startDate <= other.endDate)
             var overlapCondition = criteriaBuilder.and(
-                    criteriaBuilder.lessThanOrEqualTo(root.get("startDate"), endDate),
-                    criteriaBuilder.greaterThanOrEqualTo(root.get("endDate"), startDate)
+                    criteriaBuilder.lessThanOrEqualTo(root.get(RateTableModel_.startDate), endDate),
+                    criteriaBuilder.greaterThanOrEqualTo(root.get(RateTableModel_.endDate), startDate)
             );
 
             return criteriaBuilder.and(ratePlanCondition, typeCondition, overlapCondition);
@@ -69,11 +75,87 @@ public class RateTableSpecification {
 
     /**
      * Creates specification to exclude a specific rate table by ID.
-     * Used in UPDATE operations to exclude the current rate table from overlap validation.
      */
     public static Specification<RateTableModel> excludingId(String excludeId) {
         return (root, query, criteriaBuilder) ->
                 ObjectUtils.isEmpty(excludeId) ? criteriaBuilder.conjunction() :
-                        criteriaBuilder.notEqual(root.get("id"), excludeId);
+                        criteriaBuilder.notEqual(root.get(RateTableModel_.id), excludeId);
+    }
+
+    // ========== PRICING CALCULATION SPECIFICATIONS ==========
+
+    /**
+     * Creates specification to find rate tables that cover (overlap with) a date range.
+     * Used for finding rate tables that apply to a stay period.
+     * <p>
+     * Coverage Logic:
+     * - A rate table covers a date range if there's any overlap
+     * - Overlap exists when: rateTable.startDate <= checkoutDate AND rateTable.endDate >= checkinDate
+     *
+     * @param checkinDate  The check-in date
+     * @param checkoutDate The check-out date (exclusive)
+     * @return Specification for rate tables covering the date range
+     */
+    public static Specification<RateTableModel> withDateRangeCoverage(LocalDate checkinDate, LocalDate checkoutDate) {
+        return (root, query, criteriaBuilder) -> {
+            if (checkinDate == null || checkoutDate == null) {
+                return criteriaBuilder.conjunction();
+            }
+
+            return criteriaBuilder.and(
+                    criteriaBuilder.lessThanOrEqualTo(root.get(RateTableModel_.startDate), checkoutDate),
+                    criteriaBuilder.greaterThanOrEqualTo(root.get(RateTableModel_.endDate), checkinDate)
+            );
+        };
+    }
+
+    /**
+     * Creates specification to find rate table that covers a specific date.
+     * Used for finding the rate table that applies to a particular night.
+     * <p>
+     * Coverage Logic:
+     * - A rate table covers a date if: rateTable.startDate <= date <= rateTable.endDate
+     *
+     * @param date The specific date to check coverage for
+     * @return Specification for rate table covering the specific date
+     */
+    public static Specification<RateTableModel> withSpecificDateCoverage(LocalDate date) {
+        return (root, query, criteriaBuilder) -> {
+            if (date == null) {
+                return criteriaBuilder.conjunction();
+            }
+
+            return criteriaBuilder.and(
+                    criteriaBuilder.lessThanOrEqualTo(root.get(RateTableModel_.startDate), date),
+                    criteriaBuilder.greaterThanOrEqualTo(root.get(RateTableModel_.endDate), date)
+            );
+        };
+    }
+
+    /**
+     * Creates specification to find rate tables by type for pricing calculations.
+     * Currently focuses on STANDARD type, DYNAMIC will be implemented later.
+     *
+     * @param type The rate table type (STANDARD, DYNAMIC)
+     * @return Specification for rate tables of specific type
+     */
+    public static Specification<RateTableModel> withTypeForPricing(RateTableTypeEnum type) {
+        return (root, query, criteriaBuilder) -> {
+            if (type == null) {
+                return criteriaBuilder.equal(root.get(RateTableModel_.type), RateTableTypeEnum.STANDARD);
+            }
+
+            return criteriaBuilder.equal(root.get(RateTableModel_.type), type);
+        };
+    }
+
+    public static Specification<RateTableModel> withDateWithinInclusive(LocalDate date) {
+        return (root, query, cb) -> {
+            if (date == null) return cb.conjunction();
+            return cb.and(
+                    cb.lessThanOrEqualTo(root.get(RateTableModel_.startDate), date),
+                    cb.greaterThanOrEqualTo(root.get(RateTableModel_.endDate), date)
+            );
+        };
     }
 }

@@ -3,9 +3,13 @@ package com.smsmode.pricing.dao.specification;
 import com.smsmode.pricing.embeddable.SegmentRefEmbeddable;
 import com.smsmode.pricing.embeddable.SegmentRefEmbeddable_;
 import com.smsmode.pricing.embeddable.UnitRefEmbeddable_;
+import com.smsmode.pricing.enumeration.RateTableTypeEnum;
 import com.smsmode.pricing.model.RatePlanModel;
 import com.smsmode.pricing.model.RatePlanModel_;
+import com.smsmode.pricing.model.RateTableModel;
+import com.smsmode.pricing.model.RateTableModel_;
 import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.ObjectUtils;
@@ -66,5 +70,36 @@ public class RatePlanSpecification {
         return (root, query, criteriaBuilder) ->
                 ObjectUtils.isEmpty(unitUuid) ? criteriaBuilder.conjunction() :
                         criteriaBuilder.equal(root.get(RatePlanModel_.unit).get(UnitRefEmbeddable_.id), unitUuid);
+    }
+
+    public static Specification<RatePlanModel> withEnabled(Boolean b) {
+        return (root, query, criteriaBuilder) ->
+                b == null ? criteriaBuilder.conjunction() : criteriaBuilder.equal(root.get(RatePlanModel_.enabled), b);
+    }
+
+    public static Specification<RatePlanModel> withNoSegments() {
+        return (root, query, cb) -> cb.isEmpty(root.get(RatePlanModel_.segments));
+    }
+
+    public static Specification<RatePlanModel> withSegmentId(String segmentId) {
+        return (root, query, criteriaBuilder) -> {
+            if (ObjectUtils.isEmpty(segmentId)) {
+                return criteriaBuilder.conjunction();
+            } else {
+                Join<RatePlanModel, SegmentRefEmbeddable> segmentsJoin = root.join(RatePlanModel_.segments, JoinType.LEFT);
+                return criteriaBuilder.equal(segmentsJoin.get(SegmentRefEmbeddable_.id), segmentId);
+            }
+        };
+    }
+
+    public static Specification<RatePlanModel> withUnitId(String unitId) {
+        return (root, query, criteriaBuilder) ->
+                ObjectUtils.isEmpty(unitId) ? criteriaBuilder.conjunction() :
+                        criteriaBuilder.equal(root.get(RatePlanModel_.unit).get(UnitRefEmbeddable_.id), unitId);
+    }
+
+    public static Specification<RateTableModel> withType(RateTableTypeEnum type) {
+        return (root, query, criteriaBuilder) ->
+                ObjectUtils.isEmpty(type) ? criteriaBuilder.conjunction() : criteriaBuilder.equal(root.get(RateTableModel_.type), type);
     }
 }
