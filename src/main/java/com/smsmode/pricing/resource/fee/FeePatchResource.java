@@ -22,13 +22,14 @@ public class FeePatchResource {
     @DecimalMin("0.0")
     private BigDecimal amount;
 
-    private FeeTypeEnum type;
 
     private FeeModalityEnum modality;
 
     private String description;
 
     private Boolean active;
+
+    private Boolean required;
 
     @Valid
     private List<@Valid AdditionalGuestFeePostResource> additionalGuestPrices;

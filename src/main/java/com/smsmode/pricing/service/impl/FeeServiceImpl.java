@@ -42,10 +42,14 @@ public class FeeServiceImpl implements FeeService {
 
         // Link additional guest prices to fee if modality supports it
         if (shouldHaveAdditionalGuestPrices(feeModel.getModality()) &&
-                !CollectionUtils.isEmpty(feeModel.getAdditionalGuestPrices())) {
-            log.debug("Linking additional guest price models to fee ...");
+                feeModel.getAdditionalGuestPrices() != null &&
+                !feeModel.getAdditionalGuestPrices().isEmpty()) {
+            log.debug("Linking {} additional guest price models to fee ...",
+                    feeModel.getAdditionalGuestPrices().size());
             for (AdditionalGuestFeeModel price : feeModel.getAdditionalGuestPrices()) {
                 price.setFee(feeModel);
+                log.debug("Linked price: guestType={}, value={}",
+                        price.getGuestType(), price.getValue());
             }
         }
 
@@ -127,7 +131,6 @@ public class FeeServiceImpl implements FeeService {
         log.debug("Retrieving fees with filters - unitIds: {}, search: {}", unitIds, search);
 
         Page<FeeModel> feeModelPage = feeDaoService.findWithFilters(unitIds, search, pageable);
-        log.info("Retrieved {} fees from database", feeModelPage.getTotalElements());
 
         Page<FeeGetResource> response = feeModelPage.map(feeMapper::modelToGetResource);
 
@@ -142,13 +145,17 @@ public class FeeServiceImpl implements FeeService {
         FeeModel existingFee = feeDaoService.findById(feeId);
         log.debug("Found existing fee: {}", existingFee.getId());
 
-        // Store old modality to detect changes
-        FeeModalityEnum oldModality = existingFee.getModality();
+        // Force loading of lazy collections AVANT le mapping
+        if (existingFee.getAdditionalGuestPrices() != null) {
+            existingFee.getAdditionalGuestPrices().size();
+        }
 
         feeMapper.updateModelFromPatchResource(feePatchResource, existingFee);
 
-        // Handle additional guest prices based on modality
-        handleAdditionalGuestPricesUpdate(existingFee, feePatchResource, existingFee.getModality());
+        // Handle additional guest prices separately
+        if (feePatchResource.getAdditionalGuestPrices() != null) {
+            updateAdditionalGuestPrices(existingFee, feePatchResource.getAdditionalGuestPrices());
+        }
 
         FeeModel updatedFee = feeDaoService.save(existingFee);
         log.info("Successfully updated fee with ID: {}", feeId);
@@ -178,26 +185,6 @@ public class FeeServiceImpl implements FeeService {
     }
 
     /**
-     * Handles additional guest prices update based on modality changes
-     */
-    private void handleAdditionalGuestPricesUpdate(FeeModel existingFee,
-                                                   FeePatchResource feePatchResource,
-                                                   FeeModalityEnum oldModality) {
-        FeeModalityEnum newModality = feePatchResource.getModality() != null ?
-                feePatchResource.getModality() : oldModality;
-
-        if (!shouldHaveAdditionalGuestPrices(newModality)) {
-            log.debug("New modality {} doesn't support additional guest prices, clearing all", newModality);
-            existingFee.getAdditionalGuestPrices().clear();
-        } else {
-            // Always update additional guest prices when provided
-            updateAdditionalGuestPrices(existingFee,
-                    feePatchResource.getAdditionalGuestPrices() != null ?
-                            feePatchResource.getAdditionalGuestPrices() : new ArrayList<>());
-        }
-    }
-
-    /**
      * Updates Additional Guest Prices with 3 scenarios:
      * 1. No ID in request -> CREATE new entity
      * 2. ID provided in request -> UPDATE existing entity (preserve UUID)
@@ -205,47 +192,49 @@ public class FeeServiceImpl implements FeeService {
      */
     private void updateAdditionalGuestPrices(FeeModel existingFee,
                                              List<AdditionalGuestFeePostResource> newPrices) {
-        log.debug("Updating additional guest prices");
+        log.debug("Updating additional guest prices for fee");
 
         List<AdditionalGuestFeeModel> existingPrices = existingFee.getAdditionalGuestPrices();
 
-        // If newPrices is null, remove all existing prices
-        if (CollectionUtils.isEmpty(newPrices)) {
-            log.debug("No prices in request, removing all existing prices");
+        // Si null, on garde les existantes
+        if (newPrices == null) {
+            log.debug("No additional guest prices in PATCH request, keeping existing");
+            return;
+        }
+
+        // Si liste vide, on supprime tout
+        if (newPrices.isEmpty()) {
+            log.debug("Empty prices list in request, removing all existing prices");
             existingPrices.clear();
             return;
         }
 
-        // Create a map of existing entities by ID for fast lookup
+        // Map des existantes par ID
         Map<String, AdditionalGuestFeeModel> existingById = existingPrices.stream()
+                .filter(price -> price.getId() != null)
                 .collect(Collectors.toMap(
                         AdditionalGuestFeeModel::getId,
                         price -> price
                 ));
 
-        // Create a new collection for updated prices
         List<AdditionalGuestFeeModel> updatedPrices = new ArrayList<>();
 
-        // Process each price in the request
         for (AdditionalGuestFeePostResource priceResource : newPrices) {
             if (StringUtils.hasText(priceResource.getId())) {
-                // Scenario 2: ID provided = UPDATE existing entity
+                // ID fourni = UPDATE
                 AdditionalGuestFeeModel existingPrice = existingById.get(priceResource.getId());
                 if (existingPrice != null) {
                     log.debug("Updating existing price with ID: {}", existingPrice.getId());
-
                     feeMapper.updateAdditionalGuestFeeFromResource(priceResource, existingPrice);
-
                     updatedPrices.add(existingPrice);
                 } else {
                     log.warn("Price with ID {} not found, creating new one", priceResource.getId());
-                    // ID provided but entity not found = create new entity
                     AdditionalGuestFeeModel newPrice = feeMapper.additionalGuestFeePostResourceToModel(priceResource);
                     newPrice.setFee(existingFee);
                     updatedPrices.add(newPrice);
                 }
             } else {
-                // Scenario 1: No ID = CREATE new entity
+                // Pas d'ID = CREATE
                 log.debug("Creating new price for guestType: {}", priceResource.getGuestType());
                 AdditionalGuestFeeModel newPrice = feeMapper.additionalGuestFeePostResourceToModel(priceResource);
                 newPrice.setFee(existingFee);
@@ -253,7 +242,7 @@ public class FeeServiceImpl implements FeeService {
             }
         }
 
-        // Replace existing collection with new one
+        // Remplacer la collection
         existingPrices.clear();
         existingPrices.addAll(updatedPrices);
 

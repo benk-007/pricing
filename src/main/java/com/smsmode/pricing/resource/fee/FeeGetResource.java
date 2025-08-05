@@ -16,10 +16,10 @@ public class FeeGetResource {
     private String id;
     private String name;
     private BigDecimal amount;
-    private FeeTypeEnum type;
     private FeeModalityEnum modality;
     private String description;
     private boolean active;
+    private boolean required;
     private UnitRefEmbeddable unit;
     private AuditGetResource audit;
     private List<AdditionalGuestFeeGetResource> additionalGuestPrices;
