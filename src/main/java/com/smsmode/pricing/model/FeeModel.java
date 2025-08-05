@@ -9,7 +9,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 @Getter
@@ -40,4 +42,8 @@ public class FeeModel extends AbstractBaseModel {
 
     @Embedded
     private UnitRefEmbeddable unit;
+
+    @OneToMany(mappedBy = "fee", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @OrderBy("createdAt ASC")
+    private List<AdditionalGuestFeeModel> additionalGuestPrices = new ArrayList<>();
 }

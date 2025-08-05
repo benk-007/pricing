@@ -39,4 +39,7 @@ public class AdditionalGuestFeeModel extends AbstractBaseModel {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "RATE_TABLE_ID")
     private RateTableModel rateTable;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "FEE_ID")
+    private FeeModel fee;
 }
