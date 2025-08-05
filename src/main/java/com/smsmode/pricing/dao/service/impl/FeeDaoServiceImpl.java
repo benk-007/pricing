@@ -34,12 +34,18 @@ public class FeeDaoServiceImpl implements FeeDaoService {
     @Override
     public FeeModel findById(String feeId) {
         log.debug("Finding fee by ID: {}", feeId);
-        return feeRepository.findById(feeId).orElseThrow(() -> {
-            log.debug("Fee with ID [{}] not found", feeId);
-            return new ResourceNotFoundException(
-                    ResourceNotFoundExceptionTitleEnum.FEE_NOT_FOUND,
-                    "Fee with ID [" + feeId + "] not found");
-        });
+        return feeRepository.findById(feeId)
+                .map(fee -> {
+                    // Force loading of lazy collections
+                    fee.getAdditionalGuestPrices().size();
+                    return fee;
+                })
+                .orElseThrow(() -> {
+                    log.debug("Fee with ID [{}] not found", feeId);
+                    return new ResourceNotFoundException(
+                            ResourceNotFoundExceptionTitleEnum.FEE_NOT_FOUND,
+                            "Fee with ID [" + feeId + "] not found");
+                });
     }
 
     @Override
@@ -49,6 +55,15 @@ public class FeeDaoServiceImpl implements FeeDaoService {
         Specification<FeeModel> specification = Specification
                 .where(FeeSpecification.withUnitIds(unitIds))
                 .and(FeeSpecification.withNameContaining(search));
+
+        Page<FeeModel> page = feeRepository.findAll(specification, pageable);
+
+
+        page.getContent().forEach(fee -> {
+            if (fee.getAdditionalGuestPrices() != null) {
+                fee.getAdditionalGuestPrices().size(); // Force lazy loading
+            }
+        });
 
         return feeRepository.findAll(specification, pageable);
     }
