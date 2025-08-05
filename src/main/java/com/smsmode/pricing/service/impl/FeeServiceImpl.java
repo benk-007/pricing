@@ -78,10 +78,10 @@ public class FeeServiceImpl implements FeeService {
                 FeeModel copiedFee = new FeeModel();
                 copiedFee.setName(originalFee.getName());
                 copiedFee.setAmount(originalFee.getAmount());
-                copiedFee.setType(originalFee.getType());
                 copiedFee.setModality(originalFee.getModality());
                 copiedFee.setDescription(originalFee.getDescription());
                 copiedFee.setActive(originalFee.isActive());
+                copiedFee.setRequired(originalFee.isRequired());
                 copiedFee.setUnit(target);
 
                 feeDaoService.save(copiedFee);
@@ -107,10 +107,10 @@ public class FeeServiceImpl implements FeeService {
             FeeModel copiedFee = new FeeModel();
             copiedFee.setName(originalFee.getName());
             copiedFee.setAmount(originalFee.getAmount());
-            copiedFee.setType(originalFee.getType());
             copiedFee.setModality(originalFee.getModality());
             copiedFee.setDescription(originalFee.getDescription());
             copiedFee.setActive(originalFee.isActive());
+            copiedFee.setRequired(originalFee.isRequired());
             copiedFee.setUnit(targetUnit);
 
             feeDaoService.save(copiedFee);
@@ -148,7 +148,7 @@ public class FeeServiceImpl implements FeeService {
         feeMapper.updateModelFromPatchResource(feePatchResource, existingFee);
 
         // Handle additional guest prices based on modality
-        handleAdditionalGuestPricesUpdate(existingFee, feePatchResource, oldModality);
+        handleAdditionalGuestPricesUpdate(existingFee, feePatchResource, existingFee.getModality());
 
         FeeModel updatedFee = feeDaoService.save(existingFee);
         log.info("Successfully updated fee with ID: {}", feeId);
@@ -187,12 +187,13 @@ public class FeeServiceImpl implements FeeService {
                 feePatchResource.getModality() : oldModality;
 
         if (!shouldHaveAdditionalGuestPrices(newModality)) {
-            // Clear all additional guest prices if modality doesn't support them
             log.debug("New modality {} doesn't support additional guest prices, clearing all", newModality);
             existingFee.getAdditionalGuestPrices().clear();
-        } else if (feePatchResource.getAdditionalGuestPrices() != null) {
-            // Update additional guest prices with UUID preservation
-            updateAdditionalGuestPrices(existingFee, feePatchResource.getAdditionalGuestPrices());
+        } else {
+            // Always update additional guest prices when provided
+            updateAdditionalGuestPrices(existingFee,
+                    feePatchResource.getAdditionalGuestPrices() != null ?
+                            feePatchResource.getAdditionalGuestPrices() : new ArrayList<>());
         }
     }
 

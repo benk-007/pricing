@@ -23,9 +23,6 @@ public class FeePostResource {
     private BigDecimal amount;
 
     @NotNull
-    private FeeTypeEnum type;
-
-    @NotNull
     private FeeModalityEnum modality;
 
     private String description;
@@ -35,6 +32,9 @@ public class FeePostResource {
 
     @NotNull
     private Boolean active;
+
+    @NotNull
+    private Boolean required;
 
     @Valid
     private List<@Valid AdditionalGuestFeePostResource> additionalGuestPrices;

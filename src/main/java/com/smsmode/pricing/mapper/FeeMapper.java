@@ -49,7 +49,7 @@ public abstract class FeeMapper {
     @Mapping(target = "modifiedAt", ignore = true)
     @Mapping(target = "modifiedBy", ignore = true)
     @Mapping(target = "unit",ignore = true)
-    @Mapping(target = "additionalGuestPrices", ignore = true)
+    @Mapping(target = "additionalGuestPrices", source = "additionalGuestPrices", qualifiedByName = "mapAdditionalGuestPrices")
     public abstract void updateModelFromPatchResource(FeePatchResource patchResource, @MappingTarget FeeModel feeModel);
 
     /**

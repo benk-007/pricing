@@ -27,10 +27,6 @@ public class FeeModel extends AbstractBaseModel {
     private BigDecimal amount;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "TYPE", nullable = false)
-    private FeeTypeEnum type;
-
-    @Enumerated(EnumType.STRING)
     @Column(name = "MODALITY", nullable = false)
     private FeeModalityEnum modality;
 
@@ -39,6 +35,9 @@ public class FeeModel extends AbstractBaseModel {
 
     @Column(name = "ACTIVE", nullable = false)
     private boolean active = true;
+
+    @Column(name = "REQUIRED", nullable = false)
+    private boolean required = false;
 
     @Embedded
     private UnitRefEmbeddable unit;
