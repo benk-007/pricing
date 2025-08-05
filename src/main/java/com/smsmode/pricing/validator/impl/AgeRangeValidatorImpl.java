@@ -28,7 +28,7 @@ public class AgeRangeValidatorImpl implements ConstraintValidator<ValidAgeRange,
 
         if (to < from) {
             context.disableDefaultConstraintViolation();
-            context.buildConstraintViolationWithTemplate("toAge must be greater than fromAge")
+            context.buildConstraintViolationWithTemplate("toAge must be greater than or equal to fromAge")
                     .addPropertyNode("toAge")
                     .addConstraintViolation();
             return false;
