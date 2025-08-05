@@ -32,7 +32,7 @@ public class FeeModel extends AbstractBaseModel {
     @Column(name = "MODALITY", nullable = false)
     private FeeModalityEnum modality;
 
-    @Column(name = "DESCRIPTION")
+    @Column(name = "DESCRIPTION", columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "ACTIVE", nullable = false)
