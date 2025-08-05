@@ -57,19 +57,18 @@ public class RateTableSpecification {
      */
     public static Specification<RateTableModel> withOverlappingDates(String ratePlanUuid, RateTableTypeEnum type, LocalDate startDate, LocalDate endDate) {
         return (root, query, criteriaBuilder) -> {
-            if (ObjectUtils.isEmpty(ratePlanUuid) || type == null || startDate == null || endDate == null) {
+            if (ObjectUtils.isEmpty(ratePlanUuid) || startDate == null || endDate == null) {
                 return criteriaBuilder.conjunction();
             }
 
             var ratePlanCondition = criteriaBuilder.equal(root.get(RateTableModel_.ratePlan).get(RatePlanModel_.id), ratePlanUuid);
-            var typeCondition = criteriaBuilder.equal(root.get(RateTableModel_.type), type);
 
             var overlapCondition = criteriaBuilder.and(
                     criteriaBuilder.lessThanOrEqualTo(root.get(RateTableModel_.startDate), endDate),
                     criteriaBuilder.greaterThanOrEqualTo(root.get(RateTableModel_.endDate), startDate)
             );
 
-            return criteriaBuilder.and(ratePlanCondition, typeCondition, overlapCondition);
+            return criteriaBuilder.and(ratePlanCondition, overlapCondition);
         };
     }
 

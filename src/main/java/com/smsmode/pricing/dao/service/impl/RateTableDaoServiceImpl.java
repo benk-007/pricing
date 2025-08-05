@@ -66,11 +66,11 @@ public class RateTableDaoServiceImpl implements RateTableDaoService {
     @Override
     public boolean hasOverlappingRateTables(String ratePlanUuid, RateTableTypeEnum type,
                                             LocalDate startDate, LocalDate endDate, String excludeId) {
-        log.debug("Checking overlapping rate tables for ratePlan: {}, type: {}, dates: {} to {}",
-                ratePlanUuid, type, startDate, endDate);
+        log.debug("Checking overlapping rate tables for ratePlan: {}, dates: {} to {} (type no longer considered)",
+                ratePlanUuid, startDate, endDate);
 
         Specification<RateTableModel> specification = Specification
-                .where(RateTableSpecification.withOverlappingDates(ratePlanUuid, type, startDate, endDate));
+                .where(RateTableSpecification.withOverlappingDates(ratePlanUuid, null, startDate, endDate));
 
         if (excludeId != null) {
             specification = specification.and(RateTableSpecification.excludingId(excludeId));

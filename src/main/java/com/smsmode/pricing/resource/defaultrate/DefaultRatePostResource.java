@@ -25,9 +25,8 @@ public class DefaultRatePostResource extends BaseRateResource {
     @NotNull(message = "Nightly rate is required")
     private BigDecimal nightly;
 
-    @NotNull(message = "Minimum stay is required")
     @Min(value = 1, message = "Minimum stay must be at least 1")
-    private int minStay;
+    private Integer minStay;
 
     private Integer maxStay;
 

@@ -29,8 +29,7 @@ public class DefaultRateModel extends AbstractBaseModel {
     @Column(nullable = false)
     private BigDecimal nightly;
 
-    @Column(nullable = false)
-    private int minStay;
+    private Integer minStay;
 
     private Integer maxStay;
 

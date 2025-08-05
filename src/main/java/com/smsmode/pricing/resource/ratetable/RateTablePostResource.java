@@ -34,7 +34,6 @@ public class RateTablePostResource extends BaseRateResource {
 
     // Standard fields
     private BigDecimal nightly;
-    @NotNull(message = "Minimum stay is required")
     @Min(value = 1, message = "Minimum stay must be at least 1")
     private Integer minStay;
     private Integer maxStay;
