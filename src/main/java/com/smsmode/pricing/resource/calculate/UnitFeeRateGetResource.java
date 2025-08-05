@@ -4,23 +4,22 @@
  */
 package com.smsmode.pricing.resource.calculate;
 
+import com.smsmode.pricing.enumeration.FeeModalityEnum;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Map;
 
 /**
  * TODO: add your documentation
  *
  * @author hamzahabchi (contact: hamza.habchi@messaging-technologies.com)
- * <p>Created 31 Jul 2025</p>
+ * <p>Created 05 Aug 2025</p>
  */
 @Data
-public class UnitBookingRateGetResource {
-    Map<LocalDate, BigDecimal> pricingPerDay;
+public class UnitFeeRateGetResource {
+    private String id;
+    private String name;
+    private FeeModalityEnum modality;
     BigDecimal averagePrice;
     BigDecimal totalPrice;
-    List<UnitFeeRateGetResource> fees;
 }

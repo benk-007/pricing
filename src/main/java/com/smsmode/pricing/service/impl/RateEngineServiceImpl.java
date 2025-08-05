@@ -100,7 +100,7 @@ public class RateEngineServiceImpl implements RateEngineService {
         UnitBookingRateGetResource unitBookingRateGetResource = new UnitBookingRateGetResource();
         //Set values for this object
         unitBookingRateGetResource.setPricingPerDay(pricingPerDay);
-        unitBookingRateGetResource.setAverageDailyPrice(RateEngineServiceImpl.calculateAverage(pricingPerDay));
+        unitBookingRateGetResource.setAveragePrice(RateEngineServiceImpl.calculateAverage(pricingPerDay));
         unitBookingRateGetResource.setTotalPrice(RateEngineServiceImpl.calculateTotal(pricingPerDay));
         return unitBookingRateGetResource;
     }
