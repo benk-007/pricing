@@ -62,14 +62,15 @@ public class RateTableSpecification {
             }
 
             var ratePlanCondition = criteriaBuilder.equal(root.get(RateTableModel_.ratePlan).get(RatePlanModel_.id), ratePlanUuid);
-            var typeCondition = criteriaBuilder.equal(root.get(RateTableModel_.type), type);
+//            var typeCondition = criteriaBuilder.equal(root.get(RateTableModel_.type), type);
 
             var overlapCondition = criteriaBuilder.and(
                     criteriaBuilder.lessThanOrEqualTo(root.get(RateTableModel_.startDate), endDate),
                     criteriaBuilder.greaterThanOrEqualTo(root.get(RateTableModel_.endDate), startDate)
             );
 
-            return criteriaBuilder.and(ratePlanCondition, typeCondition, overlapCondition);
+//            return criteriaBuilder.and(ratePlanCondition, typeCondition, overlapCondition);
+            return criteriaBuilder.and(ratePlanCondition,  overlapCondition);
         };
     }
 
