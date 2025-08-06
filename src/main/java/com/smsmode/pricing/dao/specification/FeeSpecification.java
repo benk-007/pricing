@@ -5,8 +5,6 @@ import com.smsmode.pricing.model.FeeModel_;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.util.ObjectUtils;
 
-import jakarta.persistence.criteria.Join;
-
 import java.util.Set;
 
 public class FeeSpecification {
@@ -40,6 +38,16 @@ public class FeeSpecification {
                     criteriaBuilder.lower(root.get("name")),
                     "%" + name.toLowerCase() + "%"
             );
+        };
+    }
+
+    public static Specification<FeeModel> withEnabled(Boolean enabled) {
+        return (root, query, criteriaBuilder) -> {
+            if (enabled == null) {
+                return criteriaBuilder.conjunction();
+            } else {
+                return criteriaBuilder.equal(root.get(FeeModel_.active), enabled);
+            }
         };
     }
 }

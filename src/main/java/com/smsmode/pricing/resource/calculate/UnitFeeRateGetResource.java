@@ -8,6 +8,7 @@ import com.smsmode.pricing.enumeration.FeeModalityEnum;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * TODO: add your documentation
@@ -20,6 +21,7 @@ public class UnitFeeRateGetResource {
     private String id;
     private String name;
     private FeeModalityEnum modality;
-    BigDecimal averagePrice;
-    BigDecimal totalPrice;
+    BigDecimal amount;
+    private boolean required;
+    List<FeeItemGetResource> details;
 }

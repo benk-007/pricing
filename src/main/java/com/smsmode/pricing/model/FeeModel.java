@@ -2,7 +2,6 @@ package com.smsmode.pricing.model;
 
 import com.smsmode.pricing.embeddable.UnitRefEmbeddable;
 import com.smsmode.pricing.enumeration.FeeModalityEnum;
-import com.smsmode.pricing.enumeration.FeeTypeEnum;
 import com.smsmode.pricing.model.base.AbstractBaseModel;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -10,9 +9,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Getter
 @Setter

@@ -6,7 +6,6 @@ import com.smsmode.pricing.dao.specification.FeeSpecification;
 import com.smsmode.pricing.exception.ResourceNotFoundException;
 import com.smsmode.pricing.exception.enumeration.ResourceNotFoundExceptionTitleEnum;
 import com.smsmode.pricing.model.FeeModel;
-import com.smsmode.pricing.model.RatePlanModel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -24,6 +23,11 @@ import java.util.Set;
 public class FeeDaoServiceImpl implements FeeDaoService {
 
     private final FeeRepository feeRepository;
+
+    @Override
+    public Page<FeeModel> findAllBy(Specification<FeeModel> specification, Pageable pageable) {
+        return feeRepository.findAll(specification, pageable);
+    }
 
     @Override
     public FeeModel save(FeeModel FeeModel) {
