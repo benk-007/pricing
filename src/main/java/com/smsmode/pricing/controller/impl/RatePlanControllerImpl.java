@@ -24,7 +24,6 @@ public class RatePlanControllerImpl implements RatePlanController {
 
     @Override
     public ResponseEntity<RatePlanGetResource> create(RatePlanPostResource ratePlanPostResource) {
-        log.debug("POST /rate-plans - Creating rate plan: {}", ratePlanPostResource.getName());
         return ratePlanService.create(ratePlanPostResource);
     }
 

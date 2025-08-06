@@ -17,6 +17,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UnitRefEmbeddable {
 
-    @Column(name = "UNIT_ID", nullable = false)
+    @Column(name = "unit_id", nullable = false)
     private String id;
 }

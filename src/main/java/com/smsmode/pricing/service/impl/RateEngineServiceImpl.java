@@ -14,6 +14,7 @@ import com.smsmode.pricing.dao.specification.RatePlanSpecification;
 import com.smsmode.pricing.dao.specification.RateTableSpecification;
 import com.smsmode.pricing.embeddable.AgeBucketEmbeddable;
 import com.smsmode.pricing.enumeration.*;
+import com.smsmode.pricing.mapper.FeeMapper;
 import com.smsmode.pricing.model.*;
 import com.smsmode.pricing.resource.calculate.*;
 import com.smsmode.pricing.service.RateEngineService;
@@ -31,6 +32,7 @@ import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * TODO: add your documentation
@@ -47,6 +49,7 @@ public class RateEngineServiceImpl implements RateEngineService {
     private final RateTableDaoService rateTableDaoService;
     private final DefaultRateDaoService defaultRateDaoService;
     private final FeeDaoService feeDaoService;
+    private final FeeMapper feeMapper;
 
     @Override
     public ResponseEntity<Map<String, UnitBookingRateGetResource>> calculateBookingRate(BookingPostResource bookingPostResource) {
@@ -82,8 +85,13 @@ public class RateEngineServiceImpl implements RateEngineService {
         UnitBookingRateGetResource unitBookingRateGetResource = this.calculateBookingRateForUnitByPlan(bookingDates, bookingPostResource.getGuests(), ratePlanModel,
                 defaultRateModel, bookingPostResource.getGlobalOccupancy(), unit.getOccupancy());
 
-        List<UnitFeeRateGetResource> fees = this.calculateUnitBookingFeesRates(bookingDates, bookingPostResource.getGuests(), unit.getId());
-        unitBookingRateGetResource.setFees(fees);
+        List<FeeModel> feeModels = feeDaoService.findAllBy(FeeSpecification.withUnitId(unit.getId()).and(FeeSpecification.withEnabled(true)), Pageable.unpaged()).getContent();
+
+        unitBookingRateGetResource.setFees(feeModels.stream().map(feeMapper::modelToItemGetResource).collect(Collectors.toList()));
+
+
+//        List<UnitFeeRateGetResource> fees = this.calculateUnitBookingFeesRates(bookingDates, bookingPostResource.getGuests(), unit.getId());
+//        unitBookingRateGetResource.setFees(fees);
 
         return unitBookingRateGetResource;
     }
@@ -248,11 +256,9 @@ public class RateEngineServiceImpl implements RateEngineService {
 
 
         UnitBookingRateGetResource unitBookingRateGetResource = new UnitBookingRateGetResource();
-        //Set values for this object
         unitBookingRateGetResource.setPricingPerDay(pricingPerDay);
         unitBookingRateGetResource.setAveragePrice(RateEngineServiceImpl.calculateAverage(pricingPerDay));
-/*        unitBookingRateGetResource.setTotalPrice(RateEngineServiceImpl.calculateTotal(pricingPerDay));
-        unitBookingRateGetResource.setQuantity(bookingDates.size());*/
+
         return unitBookingRateGetResource;
     }
 

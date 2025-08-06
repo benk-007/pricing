@@ -30,6 +30,9 @@ public class RatePlanModel extends AbstractBaseModel {
     @Column(name = "ENABLED", nullable = false)
     private Boolean enabled = false;
 
+    @Column(name = "standard", nullable = false)
+    private boolean standard = false;
+
     @Embedded
     private UnitRefEmbeddable unit;
 

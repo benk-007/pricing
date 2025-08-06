@@ -6,12 +6,10 @@ import com.smsmode.pricing.resource.common.AuditGetResource;
 import com.smsmode.pricing.resource.common.additionalguestfee.AdditionalGuestFeeGetResource;
 import com.smsmode.pricing.resource.common.additionalguestfee.AdditionalGuestFeePostResource;
 import com.smsmode.pricing.resource.fee.FeeGetResource;
+import com.smsmode.pricing.resource.fee.FeeItemGetResource;
 import com.smsmode.pricing.resource.fee.FeePatchResource;
 import com.smsmode.pricing.resource.fee.FeePostResource;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
-import org.mapstruct.Named;
+import org.mapstruct.*;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
@@ -20,8 +18,19 @@ import java.util.List;
 /**
  * Mapper for Fee entities and resources.
  */
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring",
+        nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
 public abstract class FeeMapper {
+
+    public abstract FeeItemGetResource modelToItemGetResource(FeeModel feeModel);
+
+    /**
+     * Maps FeeModel to FeeGetResource for response.
+     */
+    @Mapping(target = "audit", source = ".")
+    @Mapping(target = "additionalGuestPrices", source = "additionalGuestPrices")
+    public abstract FeeGetResource modelToGetResource(FeeModel feeModel);
+
 
     /**
      * Maps FeePostResource to FeeModel for creation.
@@ -36,12 +45,7 @@ public abstract class FeeMapper {
     @Mapping(target = "additionalGuestPrices", source = "additionalGuestPrices", qualifiedByName = "mapAdditionalGuestPrices")
     public abstract FeeModel postResourceToModel(FeePostResource feePostResource);
 
-    /**
-     * Maps FeeModel to FeeGetResource for response.
-     */
-    @Mapping(target = "audit", source = ".")
-    @Mapping(target = "additionalGuestPrices", source = "additionalGuestPrices")
-    public abstract FeeGetResource modelToGetResource(FeeModel feeModel);
+
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)

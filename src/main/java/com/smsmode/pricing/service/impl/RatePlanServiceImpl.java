@@ -1,6 +1,7 @@
 package com.smsmode.pricing.service.impl;
 
 import com.smsmode.pricing.dao.service.RatePlanDaoService;
+import com.smsmode.pricing.dao.specification.RatePlanSpecification;
 import com.smsmode.pricing.embeddable.SegmentRefEmbeddable;
 import com.smsmode.pricing.exception.ConflictException;
 import com.smsmode.pricing.exception.enumeration.ConflictExceptionTitleEnum;
@@ -37,10 +38,14 @@ public class RatePlanServiceImpl implements RatePlanService {
 
     @Override
     public ResponseEntity<RatePlanGetResource> create(RatePlanPostResource ratePlanPostResource) {
-        log.debug("Creating rate plan: {}", ratePlanPostResource.getName());
 
-        // Transform POST resource to model
+        if (ratePlanPostResource.getStandard().equals(Boolean.TRUE) && ratePlanDaoService.existsBy(RatePlanSpecification.withStandard(true))) {
+            log.debug("A standard rate plan already exists, therefore we will set default to false ...");
+            ratePlanPostResource.setStandard(false);
+        }
+        log.debug("Mapping rate post resource to model ...");
         RatePlanModel ratePlanModel = ratePlanMapper.postResourceToModel(ratePlanPostResource);
+        log.info("Rate plan model is: {}", ratePlanModel);
 
         // If new rate plan is enabled, validate segment uniqueness
         if (Boolean.TRUE.equals(ratePlanModel.getEnabled())) {

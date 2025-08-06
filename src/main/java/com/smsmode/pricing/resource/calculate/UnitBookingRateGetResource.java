@@ -4,6 +4,7 @@
  */
 package com.smsmode.pricing.resource.calculate;
 
+import com.smsmode.pricing.resource.fee.FeeItemGetResource;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -21,5 +22,5 @@ import java.util.Map;
 public class UnitBookingRateGetResource {
     Map<LocalDate, BigDecimal> pricingPerDay;
     BigDecimal averagePrice;
-    List<UnitFeeRateGetResource> fees;
+    List<FeeItemGetResource> fees;
 }
