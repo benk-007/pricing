@@ -103,7 +103,7 @@ public class RateEngineServiceImpl implements RateEngineService {
                 unitFeeRateGetResource.setRequired(feeModel.isRequired());
 
                 //calculate price
-                if (feeModel.getModality().equals(FeeModalityEnum.PER_PERSON)) {
+                if (feeModel.getModality().equals(FeeModalityEnum.PER_PERSON) || feeModel.getModality().equals(FeeModalityEnum.PER_PERSON_PER_NIGHT)) {
                     log.debug("Adding details for fee with modality per person ...");
                     if (CollectionUtils.isEmpty(feeModel.getAdditionalGuestPrices())) {
                         log.debug("No additional guests specified, will set details based on occupancy ...");
@@ -227,10 +227,6 @@ public class RateEngineServiceImpl implements RateEngineService {
                         unitFeeRateGetResource.setDetails(details);
 
                     }
-
-
-                } else if (feeModel.getModality().equals(FeeModalityEnum.PER_PERSON_PER_NIGHT)) {
-                    log.debug("Adding details for fee with modality per person / per night ...");
 
 
                 }
