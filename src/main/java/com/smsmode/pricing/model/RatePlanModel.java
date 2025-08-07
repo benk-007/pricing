@@ -25,6 +25,7 @@ public class RatePlanModel extends AbstractBaseModel {
     private String name;
 
     @ElementCollection(fetch = FetchType.LAZY)
+    @CollectionTable(name = "rate_plan_segment")
     private Set<SegmentRefEmbeddable> segments = new HashSet<>();
 
     @Column(name = "ENABLED", nullable = false)

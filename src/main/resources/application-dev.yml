@@ -14,8 +14,3 @@ spring:
       mode: always
 server:
   port: 8087
-
-file:
-  upload:
-    root: ${user.home}/Projects/xStay/upload-folder
-    identity-document-image: ${file.upload.root}/guests/:guestId/identity-documents/

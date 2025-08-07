@@ -74,25 +74,23 @@ public class RateEngineServiceImpl implements RateEngineService {
             segmentId = bookingPostResource.getSegmentId();
         }
         RatePlanModel ratePlanModel = null;
-        if (ratePlanDaoService.existsBy(Specification.where(RatePlanSpecification.withEnabled(true)
-                        .and(RatePlanSpecification.withUnitId(unit.getId())))
-                .and(RatePlanSpecification.withSegmentId(segmentId)))) {
-            ratePlanModel = ratePlanDaoService.findOneBy(Specification.where(RatePlanSpecification.withEnabled(true)
+        if (ObjectUtils.isEmpty(segmentId)) {
+            if (ratePlanDaoService.existsBy(RatePlanSpecification.withStandard(true).and(RatePlanSpecification.withUnitId(unit.getId())))) {
+                ratePlanModel = ratePlanDaoService.findOneBy(RatePlanSpecification.withStandard(true).and(RatePlanSpecification.withUnitId(unit.getId())));
+            }
+        } else {
+            if (ratePlanDaoService.existsBy(Specification.where(RatePlanSpecification.withEnabled(true)
                             .and(RatePlanSpecification.withUnitId(unit.getId())))
-                    .and(RatePlanSpecification.withSegmentId(segmentId)));
+                    .and(RatePlanSpecification.withSegmentId(segmentId)))) {
+                ratePlanModel = ratePlanDaoService.findOneBy(Specification.where(RatePlanSpecification.withEnabled(true)
+                                .and(RatePlanSpecification.withUnitId(unit.getId())))
+                        .and(RatePlanSpecification.withSegmentId(segmentId)));
+            }
         }
-
         UnitBookingRateGetResource unitBookingRateGetResource = this.calculateBookingRateForUnitByPlan(bookingDates, bookingPostResource.getGuests(), ratePlanModel,
                 defaultRateModel, bookingPostResource.getGlobalOccupancy(), unit.getOccupancy());
-
         List<FeeModel> feeModels = feeDaoService.findAllBy(FeeSpecification.withUnitId(unit.getId()).and(FeeSpecification.withEnabled(true)), Pageable.unpaged()).getContent();
-
-        unitBookingRateGetResource.setFees(feeModels.stream().map(feeMapper::modelToItemGetResource).collect(Collectors.toList()));
-
-
-//        List<UnitFeeRateGetResource> fees = this.calculateUnitBookingFeesRates(bookingDates, bookingPostResource.getGuests(), unit.getId());
-//        unitBookingRateGetResource.setFees(fees);
-
+        unitBookingRateGetResource.setFees(feeModels.stream().map(feeMapper::modelToItemGetResource).toList());
         return unitBookingRateGetResource;
     }
 
