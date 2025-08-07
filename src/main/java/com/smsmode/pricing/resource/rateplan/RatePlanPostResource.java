@@ -1,9 +1,9 @@
 package com.smsmode.pricing.resource.rateplan;
 
 import com.smsmode.pricing.embeddable.SegmentRefEmbeddable;
-import com.smsmode.pricing.embeddable.UnitRefEmbeddable;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
@@ -16,16 +16,18 @@ import java.util.Set;
 @Data
 public class RatePlanPostResource {
 
-    @NotBlank(message = "Rate plan name is required")
+    @NotBlank
     private String name;
+
+    @NotNull
+    private boolean enabled = false;
+
+    @NotNull
+    private Boolean standard = false;
 
     @Valid
     private Set<SegmentRefEmbeddable> segments = new HashSet<>();
 
-    @NotNull(message = "Enabled status is required")
-    private Boolean enabled = false;
-
-    @NotNull(message = "Unit information is required")
-    @Valid
-    private UnitRefEmbeddable unit;
+    @NotBlank
+    private String unitId;
 }

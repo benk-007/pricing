@@ -102,4 +102,8 @@ public class RatePlanSpecification {
         return (root, query, criteriaBuilder) ->
                 ObjectUtils.isEmpty(type) ? criteriaBuilder.conjunction() : criteriaBuilder.equal(root.get(RateTableModel_.type), type);
     }
+
+    public static Specification<RatePlanModel> withStandard(boolean value) {
+        return (root, query, criteriaBuilder) -> criteriaBuilder.equal(root.get(RatePlanModel_.standard), value);
+    }
 }

@@ -13,13 +13,14 @@ import com.smsmode.pricing.resource.common.dayspecificrate.DaySpecificRateGetRes
 import com.smsmode.pricing.resource.common.dayspecificrate.DaySpecificRatePostResource;
 import com.smsmode.pricing.resource.defaultrate.DefaultRateGetResource;
 import com.smsmode.pricing.resource.defaultrate.DefaultRatePostResource;
-import org.mapstruct.*;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.Named;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Mapper for DefaultRate entities and resources
@@ -33,7 +34,7 @@ public abstract class DefaultRateMapper {
     /**
      * Maps DefaultRatePostResource to DefaultRateModel
      */
-
+    @Mapping(source = "unitId", target = "unit.id")
     @Mapping(target = "additionalGuestFees", source = "additionalGuestFees", qualifiedByName = "mapAdditionalGuestFees")
     @Mapping(target = "daySpecificRates", source = "daySpecificRates", qualifiedByName = "mapDaySpecificRates")
     public abstract DefaultRateModel postResourceToModel(DefaultRatePostResource defaultRatePostResource);

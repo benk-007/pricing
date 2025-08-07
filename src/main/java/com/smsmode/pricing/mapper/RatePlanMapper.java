@@ -18,11 +18,7 @@ public abstract class RatePlanMapper {
     /**
      * Maps RatePlanPostResource to RatePlanModel for creation.
      */
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "createdBy", ignore = true)
-    @Mapping(target = "modifiedAt", ignore = true)
-    @Mapping(target = "modifiedBy", ignore = true)
+    @Mapping(source = "unitId", target = "unit.id")
     public abstract RatePlanModel postResourceToModel(RatePlanPostResource ratePlanPostResource);
 
     /**

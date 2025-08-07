@@ -5,10 +5,10 @@ import com.smsmode.pricing.enumeration.RateTableTypeEnum;
 import com.smsmode.pricing.resource.common.BaseRateResource;
 import com.smsmode.pricing.validator.ValidRateTableDates;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -16,7 +16,8 @@ import java.time.LocalDate;
 /**
  * Resource for creating rate tables.
  */
-@Data
+@Getter
+@Setter
 @ValidRateTableDates
 public class RateTablePostResource extends BaseRateResource {
 
@@ -34,8 +35,6 @@ public class RateTablePostResource extends BaseRateResource {
 
     // Standard fields
     private BigDecimal nightly;
-    @NotNull(message = "Minimum stay is required")
-    @Min(value = 1, message = "Minimum stay must be at least 1")
     private Integer minStay;
     private Integer maxStay;
 

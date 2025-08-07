@@ -17,7 +17,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class UnitRefEmbeddable {
 
-    @NotBlank(message = "Unit UUID is required")
-    @Column(name = "UNIT_ID", nullable = false)
+    @Column(name = "unit_id", nullable = false)
     private String id;
 }

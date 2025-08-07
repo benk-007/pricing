@@ -24,7 +24,7 @@ public class AgeBucketEmbeddable {
     @PositiveOrZero
     @NotNull
     private Integer fromAge;
-    @Positive
+    @PositiveOrZero
     @NotNull
     private Integer toAge;
 }

@@ -5,21 +5,22 @@
 package com.smsmode.pricing.service.impl;
 
 import com.smsmode.pricing.dao.service.DefaultRateDaoService;
+import com.smsmode.pricing.dao.service.FeeDaoService;
 import com.smsmode.pricing.dao.service.RatePlanDaoService;
 import com.smsmode.pricing.dao.service.RateTableDaoService;
 import com.smsmode.pricing.dao.specification.DefaultRateSpecification;
+import com.smsmode.pricing.dao.specification.FeeSpecification;
 import com.smsmode.pricing.dao.specification.RatePlanSpecification;
 import com.smsmode.pricing.dao.specification.RateTableSpecification;
 import com.smsmode.pricing.embeddable.AgeBucketEmbeddable;
-import com.smsmode.pricing.enumeration.AmountTypeEnum;
-import com.smsmode.pricing.enumeration.GuestTypeEnum;
-import com.smsmode.pricing.enumeration.OccupancyModeEnum;
-import com.smsmode.pricing.enumeration.RateTableTypeEnum;
+import com.smsmode.pricing.enumeration.*;
+import com.smsmode.pricing.mapper.FeeMapper;
 import com.smsmode.pricing.model.*;
 import com.smsmode.pricing.resource.calculate.*;
 import com.smsmode.pricing.service.RateEngineService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -30,10 +31,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * TODO: add your documentation
@@ -49,6 +48,8 @@ public class RateEngineServiceImpl implements RateEngineService {
     private final RatePlanDaoService ratePlanDaoService;
     private final RateTableDaoService rateTableDaoService;
     private final DefaultRateDaoService defaultRateDaoService;
+    private final FeeDaoService feeDaoService;
+    private final FeeMapper feeMapper;
 
     @Override
     public ResponseEntity<Map<String, UnitBookingRateGetResource>> calculateBookingRate(BookingPostResource bookingPostResource) {
@@ -72,18 +73,173 @@ public class RateEngineServiceImpl implements RateEngineService {
         } else if (!ObjectUtils.isEmpty(bookingPostResource.getSegmentId())) {
             segmentId = bookingPostResource.getSegmentId();
         }
-
         RatePlanModel ratePlanModel = null;
-        if (ratePlanDaoService.existsBy(Specification.where(RatePlanSpecification.withEnabled(true)
-                        .and(RatePlanSpecification.withUnitId(unit.getId())))
-                .and(RatePlanSpecification.withSegmentId(segmentId)))) {
-            ratePlanModel = ratePlanDaoService.findOneBy(Specification.where(RatePlanSpecification.withEnabled(true)
+        if (ObjectUtils.isEmpty(segmentId)) {
+            if (ratePlanDaoService.existsBy(RatePlanSpecification.withStandard(true).and(RatePlanSpecification.withUnitId(unit.getId())))) {
+                ratePlanModel = ratePlanDaoService.findOneBy(RatePlanSpecification.withStandard(true).and(RatePlanSpecification.withUnitId(unit.getId())));
+            }
+        } else {
+            if (ratePlanDaoService.existsBy(Specification.where(RatePlanSpecification.withEnabled(true)
                             .and(RatePlanSpecification.withUnitId(unit.getId())))
-                    .and(RatePlanSpecification.withSegmentId(segmentId)));
+                    .and(RatePlanSpecification.withSegmentId(segmentId)))) {
+                ratePlanModel = ratePlanDaoService.findOneBy(Specification.where(RatePlanSpecification.withEnabled(true)
+                                .and(RatePlanSpecification.withUnitId(unit.getId())))
+                        .and(RatePlanSpecification.withSegmentId(segmentId)));
+            }
         }
-
-        return this.calculateBookingRateForUnitByPlan(bookingDates, bookingPostResource.getGuests(), ratePlanModel,
+        UnitBookingRateGetResource unitBookingRateGetResource = this.calculateBookingRateForUnitByPlan(bookingDates, bookingPostResource.getGuests(), ratePlanModel,
                 defaultRateModel, bookingPostResource.getGlobalOccupancy(), unit.getOccupancy());
+        List<FeeModel> feeModels = feeDaoService.findAllBy(FeeSpecification.withUnitId(unit.getId()).and(FeeSpecification.withEnabled(true)), Pageable.unpaged()).getContent();
+        unitBookingRateGetResource.setFees(feeModels.stream().map(feeMapper::modelToItemGetResource).toList());
+        return unitBookingRateGetResource;
+    }
+
+    private List<UnitFeeRateGetResource> calculateUnitBookingFeesRates(List<LocalDate> bookingDates, GuestsPostResource guests, String unitId) {
+        List<UnitFeeRateGetResource> fees = new ArrayList<>();
+
+        List<FeeModel> feeModels = feeDaoService.findAllBy(FeeSpecification.withUnitId(unitId).and(FeeSpecification.withEnabled(true)), Pageable.unpaged()).getContent();
+
+        if (!CollectionUtils.isEmpty(feeModels)) {
+            for (FeeModel feeModel : feeModels) {
+                UnitFeeRateGetResource unitFeeRateGetResource = new UnitFeeRateGetResource();
+                unitFeeRateGetResource.setId(feeModel.getId());
+                unitFeeRateGetResource.setName(feeModel.getName());
+                unitFeeRateGetResource.setModality(feeModel.getModality());
+                unitFeeRateGetResource.setAmount(feeModel.getAmount());
+                unitFeeRateGetResource.setRequired(feeModel.isRequired());
+
+                //calculate price
+                if (feeModel.getModality().equals(FeeModalityEnum.PER_PERSON) || feeModel.getModality().equals(FeeModalityEnum.PER_PERSON_PER_NIGHT)) {
+                    log.debug("Adding details for fee with modality per person ...");
+                    if (CollectionUtils.isEmpty(feeModel.getAdditionalGuestPrices())) {
+                        log.debug("No additional guests specified, will set details based on occupancy ...");
+                        List<FeeItemGetResource> details = new ArrayList<>();
+                        FeeItemGetResource adultFeeItem = new FeeItemGetResource();
+                        adultFeeItem.setGuestType(GuestTypeEnum.ADULT);
+                        adultFeeItem.setQuantity(guests.getAdults());
+                        adultFeeItem.setPrice(feeModel.getAmount());
+                        details.add(adultFeeItem);
+
+                        if (CollectionUtils.isEmpty(guests.getChildren())) {
+                            log.debug("No children specified");
+                        } else {
+                            log.debug("Adding fee details for children ...");
+                            FeeItemGetResource childrenFeeItem = new FeeItemGetResource();
+                            childrenFeeItem.setGuestType(GuestTypeEnum.CHILD);
+                            childrenFeeItem.setQuantity(guests.getChildren().size());
+                            childrenFeeItem.setPrice(feeModel.getAmount());
+                            details.add(childrenFeeItem);
+                        }
+                        unitFeeRateGetResource.setDetails(details);
+                    } else {
+                        List<FeeItemGetResource> details = new ArrayList<>();
+                        Optional<AdditionalGuestFeeModel> adultFeeOptional = feeModel.getAdditionalGuestPrices().stream()
+                                .filter(fee -> GuestTypeEnum.ADULT.equals(fee.getGuestType()))
+                                .findFirst();
+                        if (adultFeeOptional.isEmpty()) {
+                            FeeItemGetResource adultFeeItem = new FeeItemGetResource();
+                            adultFeeItem.setGuestType(GuestTypeEnum.ADULT);
+                            adultFeeItem.setQuantity(guests.getAdults());
+                            adultFeeItem.setPrice(feeModel.getAmount());
+                            details.add(adultFeeItem);
+                        } else {
+
+                            int guestCountThreshold = adultFeeOptional.get().getGuestCount(); // e.g., 1
+                            GuestTypeEnum type = adultFeeOptional.get().getGuestType(); // e.g., ADULT
+                            int totalAdults = guests.getAdults();
+                            int baseGuestCount = Math.min(guestCountThreshold, totalAdults);
+                            if (baseGuestCount > 0) {
+                                FeeItemGetResource baseItem = new FeeItemGetResource();
+                                baseItem.setGuestType(type);
+                                baseItem.setQuantity(baseGuestCount);
+                                baseItem.setPrice(feeModel.getAmount());
+                                details.add(baseItem);
+                            }
+                            int additionalGuestCount = Math.max(0, totalAdults - guestCountThreshold);
+                            if (additionalGuestCount > 0) {
+                                FeeItemGetResource extraItem = new FeeItemGetResource();
+                                extraItem.setGuestType(type);
+                                extraItem.setQuantity(additionalGuestCount);
+                                if (adultFeeOptional.get().getAmountType().equals(AmountTypeEnum.FLAT)) {
+                                    extraItem.setPrice(adultFeeOptional.get().getValue());
+                                } else {
+                                    extraItem.setPrice(feeModel.getAmount().multiply(adultFeeOptional.get().getValue()).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
+                                }
+                                details.add(extraItem);
+                            }
+
+                        }
+                        // Handle children with age buckets
+                        if (!CollectionUtils.isEmpty(guests.getChildren())) {
+                            List<AdditionalGuestFeeModel> childFeeModels = feeModel.getAdditionalGuestPrices().stream()
+                                    .filter(fee -> GuestTypeEnum.CHILD.equals(fee.getGuestType()))
+                                    .toList();
+                            if (CollectionUtils.isEmpty(childFeeModels)) {
+                                FeeItemGetResource adultFeeItem = new FeeItemGetResource();
+                                adultFeeItem.setGuestType(GuestTypeEnum.CHILD);
+                                adultFeeItem.setQuantity(guests.getChildren().stream()
+                                        .mapToInt(ChildPostResource::getQuantity)
+                                        .sum());
+                                adultFeeItem.setPrice(feeModel.getAmount());
+                                details.add(adultFeeItem);
+                            } else {
+                                int unmatchedChildQuantity = 0;
+
+                                for (ChildPostResource child : guests.getChildren()) {
+                                    int childAge = child.getAge();
+                                    int childQty = child.getQuantity();
+
+                                    // Try to find a matching age bucket
+                                    Optional<AdditionalGuestFeeModel> matchingFeeOpt = childFeeModels.stream()
+                                            .filter(fee -> {
+                                                AgeBucketEmbeddable bucket = fee.getAgeBucket();
+                                                return bucket != null && childAge >= bucket.getFromAge() && childAge <= bucket.getToAge();
+                                            })
+                                            .findFirst();
+
+                                    if (matchingFeeOpt.isPresent()) {
+                                        AdditionalGuestFeeModel matchingFee = matchingFeeOpt.get();
+                                        FeeItemGetResource feeItem = new FeeItemGetResource();
+                                        feeItem.setGuestType(GuestTypeEnum.CHILD);
+                                        feeItem.setAgeBucket(matchingFee.getAgeBucket());
+                                        feeItem.setQuantity(childQty);
+
+                                        if (matchingFee.getAmountType() == AmountTypeEnum.FLAT) {
+                                            feeItem.setPrice(matchingFee.getValue());
+                                        } else {
+                                            feeItem.setPrice(feeModel.getAmount()
+                                                    .multiply(matchingFee.getValue())
+                                                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP));
+                                        }
+
+                                        details.add(feeItem);
+                                    } else {
+                                        unmatchedChildQuantity += childQty;
+                                    }
+                                }
+
+                                // Add one entry for all unmatched children (no age bucket)
+                                if (unmatchedChildQuantity > 0) {
+                                    FeeItemGetResource unmatchedFeeItem = new FeeItemGetResource();
+                                    unmatchedFeeItem.setGuestType(GuestTypeEnum.CHILD);
+                                    unmatchedFeeItem.setAgeBucket(null); // explicitly no age bucket
+                                    unmatchedFeeItem.setQuantity(unmatchedChildQuantity);
+                                    unmatchedFeeItem.setPrice(feeModel.getAmount());
+                                    details.add(unmatchedFeeItem);
+                                }
+                            }
+
+                        }
+                        unitFeeRateGetResource.setDetails(details);
+
+                    }
+
+
+                }
+                fees.add(unitFeeRateGetResource);
+            }
+        }
+        return fees;
     }
 
     private UnitBookingRateGetResource calculateBookingRateForUnitByPlan(List<LocalDate> bookingDates, GuestsPostResource guests, RatePlanModel ratePlan, DefaultRateModel defaultRateModel, BigDecimal globalOccupancy, BigDecimal unitOccupancy) {
@@ -98,10 +254,9 @@ public class RateEngineServiceImpl implements RateEngineService {
 
 
         UnitBookingRateGetResource unitBookingRateGetResource = new UnitBookingRateGetResource();
-        //Set values for this object
         unitBookingRateGetResource.setPricingPerDay(pricingPerDay);
-        unitBookingRateGetResource.setAverageDailyPrice(RateEngineServiceImpl.calculateAverage(pricingPerDay));
-        unitBookingRateGetResource.setTotalPrice(RateEngineServiceImpl.calculateTotal(pricingPerDay));
+        unitBookingRateGetResource.setAveragePrice(RateEngineServiceImpl.calculateAverage(pricingPerDay));
+
         return unitBookingRateGetResource;
     }
 

@@ -21,10 +21,9 @@ import java.util.List;
 /**
  * Mapper for RateTable entities and resources.
  */
-@Mapper(
-        componentModel = "spring",
-        nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE
-)public abstract class RateTableMapper {
+@Mapper(componentModel = "spring",
+        nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+public abstract class RateTableMapper {
 
     private RatePlanDaoService ratePlanDaoService;
 

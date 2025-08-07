@@ -12,11 +12,11 @@ import java.util.Set;
  */
 @Data
 public class RatePlanGetResource {
-
     private String id;
     private String name;
+    private boolean enabled;
+    private boolean standard;
     private Set<SegmentRefEmbeddable> segments;
-    private Boolean enabled;
     private UnitRefEmbeddable unit;
     private AuditGetResource audit;
 }
