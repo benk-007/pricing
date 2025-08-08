@@ -39,6 +39,11 @@ public class UserContext {
     private String email;
 
     /**
+     * Property ID associated with the current user.
+     */
+    private String propertyId;
+
+    /**
      * User's roles.
      */
     private Set<RoleEnum> roles = Collections.emptySet(); // Initialize to an empty set

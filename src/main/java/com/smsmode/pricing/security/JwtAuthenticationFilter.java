@@ -26,8 +26,7 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import static com.smsmode.pricing.util.SecurityUtil.AUTHORITIES_KEY;
-import static com.smsmode.pricing.util.SecurityUtil.USERNAME_KEY;
+import static com.smsmode.pricing.util.SecurityUtil.*;
 
 
 /**
@@ -72,11 +71,16 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 String userId =
                         jwtTokenProviderService.getClaimFromTokenAsString(authToken, SecurityUtil.IDENTIFIER_KEY);
+
                 String username = jwtTokenProviderService.getClaimFromTokenAsString(authToken, USERNAME_KEY);
                 UserContextHolder.getContext().setUserId(userId);
                 UserContextHolder.getContext().setEmail(username);
                 UserContextHolder.getContext()
                         .setFullName(jwtTokenProviderService.getClaimsFromToken(authToken).getSubject());
+
+                String propertyId = jwtTokenProviderService.getClaimFromTokenAsString(authToken, PROPERTY_ID_KEY);
+                UserContextHolder.getContext().setPropertyId(propertyId);
+
                 String authoritiesToken =
                         String.join(",", jwtTokenProviderService.getClaimFromTokenAsString(authToken, AUTHORITIES_KEY));
                 Set<? extends GrantedAuthority> authorities =

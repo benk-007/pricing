@@ -37,6 +37,11 @@ public class SecurityUtil {
     public static final String USERNAME_KEY = "username";
 
     /**
+     * Constant representing the key for the property ID in JWT tokens.
+     */
+    public static final String PROPERTY_ID_KEY = "propertyId";
+
+    /**
      * Constant representing the key for identifier information in authentication tokens.
      */
     public static final String IDENTIFIER_KEY = "identifier";
