@@ -27,7 +27,6 @@ public class FeePostResource {
 
     private String description;
 
-    @NotNull
     private UnitRefEmbeddable unit;
 
     @NotNull

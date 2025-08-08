@@ -50,4 +50,25 @@ public class FeeSpecification {
             }
         };
     }
+
+    public static Specification<FeeModel> withPropertyId(String propertyId) {
+        return (root, query, criteriaBuilder) -> {
+            if (ObjectUtils.isEmpty(propertyId)) {
+                return criteriaBuilder.conjunction();
+            }
+            return criteriaBuilder.equal(root.get(FeeModel_.property).get("id"), propertyId);
+        };
+    }
+
+    public static Specification<FeeModel> isGeneric(boolean generic) {
+        return (root, query, criteriaBuilder) -> {
+            if (generic) {
+                // Frais génériques : unit est null
+                return criteriaBuilder.isNull(root.get(FeeModel_.unit));
+            } else {
+                // Frais spécifiques : unit n'est pas null
+                return criteriaBuilder.isNotNull(root.get(FeeModel_.unit));
+            }
+        };
+    }
 }

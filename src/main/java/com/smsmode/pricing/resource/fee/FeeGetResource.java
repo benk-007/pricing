@@ -1,5 +1,6 @@
 package com.smsmode.pricing.resource.fee;
 
+import com.smsmode.pricing.embeddable.PropertyRefEmbeddable;
 import com.smsmode.pricing.embeddable.UnitRefEmbeddable;
 import com.smsmode.pricing.enumeration.FeeModalityEnum;
 import com.smsmode.pricing.enumeration.FeeTypeEnum;
@@ -21,6 +22,7 @@ public class FeeGetResource {
     private boolean active;
     private boolean required;
     private UnitRefEmbeddable unit;
+    private PropertyRefEmbeddable property;
     private AuditGetResource audit;
     private List<AdditionalGuestFeeGetResource> additionalGuestPrices;
 }

@@ -1,5 +1,6 @@
 package com.smsmode.pricing.model;
 
+import com.smsmode.pricing.embeddable.PropertyRefEmbeddable;
 import com.smsmode.pricing.embeddable.UnitRefEmbeddable;
 import com.smsmode.pricing.enumeration.FeeModalityEnum;
 import com.smsmode.pricing.model.base.AbstractBaseModel;
@@ -38,6 +39,9 @@ public class FeeModel extends AbstractBaseModel {
 
     @Embedded
     private UnitRefEmbeddable unit;
+
+    @Embedded
+    private PropertyRefEmbeddable property;
 
     @OneToMany(mappedBy = "fee", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @OrderBy("createdAt ASC")
